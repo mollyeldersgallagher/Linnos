@@ -68,26 +68,9 @@ function MyDrawer() {
 export default function App() {
   useEffect(() => {
 
-    // getPrices();
-    // verifyPin();
-    // getConfiguration();
-    // saveState();
-    // let newBuffer = Buffer.from([2, 22, 0]);
-    // splitCRC(crc.crc16xmodem(newBuffer));
-    // console.log("yello" + unpack('02 03 00 00'));
   });
-  function unpack(str) {
-    var bytes = [];
-    for (var i = 0; i < str.length; i++) {
-      var char = str.charCodeAt(i);
-      bytes.push(char >>> 8);
-      bytes.push(char & 0xff);
-    }
-    return bytes;
-  }
   return (
     <>
-   
       {Platform.OS === 'ios' && <StatusBar barStyle="light-content" />}
       <NavigationContainer>
       <MyDrawer />
