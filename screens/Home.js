@@ -1,5 +1,4 @@
 import React, {useState, useContext, useEffect} from 'react';
-import Sign from '../services/Sign';
 import {
   Text,
   View,

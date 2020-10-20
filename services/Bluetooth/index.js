@@ -17,7 +17,6 @@ import BluetoothSerial, {
 import {Buffer} from 'buffer';
 
 import {verifyPin, hexToAscii, asciiToHex} from './readWrite';
-import Sign from '../Sign';
 import Button from '../../components/Button';
 import DeviceList from '../../components/DeviceList';
 import styles from './styles';
