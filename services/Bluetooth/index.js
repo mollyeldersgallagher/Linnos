@@ -10,7 +10,6 @@ import {
   Modal,
   Button,
   PermissionsAndroid,
-  TouchableOpacity,
 } from 'react-native';
 
 import Toast from '@remobile/react-native-toast';
@@ -375,7 +374,6 @@ class Bluetooth extends React.Component {
       this.setState({processing: false});
     }
   };
-  selectedDevice = async () => {};
 
   renderModal = (device, processing) => {
     // console.log('DEVICE' + device);
@@ -523,33 +521,31 @@ class Bluetooth extends React.Component {
               devices={devices}
               onDevicePressed={(device) => {
                 this.setState({device});
-                this.selectedDevice();
+                // this.selectedDevice();
               }}
               onRefresh={this.listDevices}
             />
           </React.Fragment>
         )}
 
-        {/* <View> */}
-        {/* <ScrollView horizontal contentContainerStyle={styles.fixedFooter}> */}
-        {isEnabled && (
-          <TouchableOpacity
-            style={styles.footerButton}
-            activeOpacity={0.5}
-            onPress={() => this.discoverUnpairedDevices}>
-            <Text>Start Scan</Text>
-          </TouchableOpacity>
-        )}
-        {!isEnabled && (
-          <TouchableOpacity
-            style={styles.footerButton}
-            activeOpacity={0.5}
-            onPress={() => this.requestEnable}>
-            <Text>Request Enable Bluetooth</Text>
-          </TouchableOpacity>
-        )}
-        {/* </ScrollView> */}
-        {/* </View> */}
+        <View style={styles.footer}>
+          {/* <ScrollView horizontal contentContainerStyle={styles.fixedFooter}> */}
+          {isEnabled && (
+            <Button
+              style={styles.footerButton}
+              title="Start Scan"
+              onPress={this.discoverUnpairedDevices}
+            />
+          )}
+          {!isEnabled && (
+            <Button
+              title="Request Enable Bluetooth"
+              style={styles.footerButton}
+              onPress={this.requestEnable}
+            />
+          )}
+          {/* </ScrollView> */}
+        </View>
       </SafeAreaView>
     );
   }

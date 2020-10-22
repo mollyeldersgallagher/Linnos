@@ -32,21 +32,6 @@ import {
   getPrices,
 } from '../../services/Bluetooth/readWrite';
 
-function Price({navigation, title}) {
-  return (
-    <View style={styles.header}>
-      {/* icon for the menu */}
-      <TouchableOpacity
-        onPress={() => navigation.dispatch(DrawerActions.toggleDrawer())}
-        style={styles.icons}>
-        <Icon name="menu-outline" size={28} color="white" />
-      </TouchableOpacity>
-      <View style={styles.headerTitle}>
-        <Text style={styles.headerText}>{title}</Text>
-      </View>
-    </View>
-  );
-}
 export default class SignController extends React.Component {
   constructor(props) {
     super(props);
@@ -61,6 +46,8 @@ export default class SignController extends React.Component {
       extLight: false,
       brightness: 45,
       config: {},
+      prices: [],
+      newPrices: [],
       deviceId: this.props.route.params.deviceId,
       // events: this.props.route.params.events,
     };
@@ -80,12 +67,18 @@ export default class SignController extends React.Component {
       this.setState({
         auto: config.auto,
         brightness: config.brightness,
+        lines: parseInt(config.lines),
+        digits: parseInt(config.digits),
         config: config,
       });
-      let signPrices = await getPrices(this.state.deviceId);
+      let signPrices = await getPrices(
+        this.state.deviceId,
+        this.state.lines,
+        this.state.digits,
+      );
       await this.setState({
-        priceOne: signPrices[0],
-        priceTwo: signPrices[1],
+        prices: signPrices,
+        newPrices: signPrices,
       });
       let lightStatus = await getLightingStatus(this.state.deviceId);
       await this.setState({
@@ -96,23 +89,34 @@ export default class SignController extends React.Component {
     }
   }
 
-  updatePrices(priceOne, priceTwo) {
-    let priceDigits = [];
-    let hexDigits = [];
+  updatePrices() {
+    let prices = [...this.state.newPrices];
+
+    let priceDigits;
+    let hexDigits;
     let dataLengthBuffer;
 
-    let priceOneDigits = Array.from(priceOne.toString()).map(Number);
-    let priceTwoDigits = Array.from(priceTwo.toString()).map(Number);
+    priceDigits = prices.join('');
+    console.log(prices);
+    priceDigits = Array.from(prices.join('')).map(Number);
 
-    priceDigits = priceOneDigits.concat(priceTwoDigits);
     dataLengthBuffer = Buffer.from([priceDigits.length]);
 
     hexDigits = priceDigits.map((d) => asciiToHex(d));
+
     let priceBuffer = Buffer.from(hexDigits);
 
     console.log(dataLengthBuffer);
     console.log(priceBuffer);
     priceCommandHandler(dataLengthBuffer, priceBuffer, this.state.deviceId);
+  }
+  handlePrices(price, index) {
+    console.log(index - 1, price);
+    // let newArray = new Array(this.state.lines - 1);
+    let newArray = [...this.state.newPrices];
+    newArray[index - 1] = parseInt(price);
+    this.setState({newPrices: newArray});
+    console.log(newArray);
   }
   handlePriceOne(priceOne) {
     this.setState({priceOne: priceOne});
@@ -181,22 +185,45 @@ export default class SignController extends React.Component {
   }
 
   render() {
-    // console.log('DeviceConnection.render()');
-    // console.log(this.state);
+    let priceInputs = [];
+    console.log(this.state.lines);
+    for (let i = 1; i <= this.state.lines; i++) {
+      // let index = i - 1;
+      priceInputs.push(
+        <View
+          style={{
+            flex: 2,
+            flexDirection: 'column',
+            margin: 10,
+          }}>
+          <Text style={styles.header}>Price {i}</Text>
 
+          <TextInput
+            style={styles.input}
+            // name={index}
+            onChangeText={(text) => this.handlePrices(text, i)}
+            keyboardType={'numeric'}
+            placeholder="Price one in format 1234 for 123.4"
+            maxLength={this.state.digits}
+            defaultValue={this.state.prices[i - 1]}
+          />
+        </View>,
+      );
+    }
     return (
       <Container>
         <ScrollView>
           {this.state.isVerified ? (
             <View style={{flex: 1}}>
               <Text style={{fontSize: 20, marginTop: 10}}> Update Sign </Text>
-              {}
-              <View
+              {priceInputs}
+              {/* <View
                 style={{
                   flex: 2,
                   flexDirection: 'column',
                   margin: 10,
                 }}>
+                {this.state.prices.map(price =>())}
                 <Text style={styles.header}>Price 1</Text>
 
                 <TextInput
@@ -218,14 +245,14 @@ export default class SignController extends React.Component {
                   value={this.state.priceTwo}
                   placeholder="Price two in format 1234 for 123.4"
                 />
-              </View>
+              </View> */}
 
               <View style={{flex: 1, flexDirection: 'column', margin: 10}}>
                 <TouchableOpacity
                   style={styles.button}
                   activeOpacity={0.5}
                   onPress={() => {
-                    this.updatePrices(this.state.priceOne, this.state.priceTwo);
+                    this.updatePrices();
                   }}>
                   <Text style={styles.buttonText}>Update Prices</Text>
                 </TouchableOpacity>
