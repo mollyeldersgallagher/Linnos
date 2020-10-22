@@ -8,6 +8,9 @@ import {
   View,
   ActivityIndicator,
   Modal,
+  Button,
+  PermissionsAndroid,
+  TouchableOpacity,
 } from 'react-native';
 
 import Toast from '@remobile/react-native-toast';
@@ -17,7 +20,7 @@ import BluetoothSerial, {
 import {Buffer} from 'buffer';
 
 import {verifyPin, hexToAscii, asciiToHex} from './readWrite';
-import Button from '../../components/Button';
+
 import DeviceList from '../../components/DeviceList';
 import styles from './styles';
 
@@ -40,9 +43,19 @@ class Bluetooth extends React.Component {
 
   async componentDidMount() {
     // this.hello();
+    console.log(this.props);
+
     this.events = this.props.events;
     //console.log(this.props.events);
-
+    PermissionsAndroid.check(
+      PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION,
+    ).then((result) => {
+      if (!result) {
+        PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION,
+        );
+      }
+    });
     try {
       const [isEnabled, devices] = await Promise.all([
         BluetoothSerial.isEnabled(),
@@ -160,27 +173,24 @@ class Bluetooth extends React.Component {
 
     try {
       const unpairedDevices = await BluetoothSerial.listUnpaired();
-      //   console.log(unpairedDevices);
+      console.log(unpairedDevices);
 
-      this.setState(({devices}) => ({
+      let newList = unpairedDevices.map((device) => {
+        const found = this.state.devices.filter((d) => d.id === device.id); // filter devices not in list yet
+        if (!found) {
+          return {
+            ...device,
+            connected: false,
+            paired: false,
+          };
+        }
+        return device;
+      });
+
+      this.setState({
         scanning: false,
-        devices: devices
-          .map((device) => {
-            const found = unpairedDevices.find((d) => d.id === device.id);
-
-            if (found) {
-              return {
-                ...device,
-                ...found,
-                connected: false,
-                paired: false,
-              };
-            }
-
-            return device.paired || device.connected ? device : null;
-          })
-          .map((v) => v),
-      }));
+        devices: [...this.state.devices, ...newList],
+      });
     } catch (e) {
       Toast.showShortBottom(e.message);
 
@@ -365,6 +375,7 @@ class Bluetooth extends React.Component {
       this.setState({processing: false});
     }
   };
+  selectedDevice = async () => {};
 
   renderModal = (device, processing) => {
     // console.log('DEVICE' + device);
@@ -395,6 +406,7 @@ class Bluetooth extends React.Component {
               <ActivityIndicator
                 style={{marginTop: 15}}
                 size={Platform.OS === 'ios' ? 1 : 60}
+                animating={processing}
               />
             )}
 
@@ -421,20 +433,7 @@ class Bluetooth extends React.Component {
                 {connected && (
                   <React.Fragment>
                     <Button
-                      title="Write"
-                      style={{
-                        backgroundColor: '#22509d',
-                      }}
-                      textStyle={{color: '#fff'}}
-                      onPress={() =>
-                        this.write(
-                          id,
-                          'This is the test message\r\nDoes it work?\r\nTell me it works!\r\n',
-                        )
-                      }
-                    />
-                    <Button
-                      title="Write packets"
+                      title="Sign Controller"
                       style={{
                         backgroundColor: '#22509d',
                       }}
@@ -465,6 +464,16 @@ class Bluetooth extends React.Component {
       console.log('error no device found');
     }
   };
+  callConnectedDevice = (device) => {
+    if (device) {
+      this.props.navigation.navigate('ConnectedDevice', {
+        deviceId: this.state.device.id,
+        device: device,
+      });
+    } else {
+      console.log('error no device found');
+    }
+  };
 
   render() {
     const {isEnabled, device, devices, scanning, processing} = this.state;
@@ -472,12 +481,17 @@ class Bluetooth extends React.Component {
     return (
       <SafeAreaView style={{flex: 1}}>
         <View style={styles.topBar}>
-          <Text style={styles.heading}>Bluetooth Example</Text>
+          <Text style={styles.heading}>Bluetooth</Text>
           <View style={styles.enableInfoWrapper}>
-            <Text style={{fontSize: 14, color: '#fff', paddingRight: 10}}>
+            <Text style={{fontSize: 14, color: '#0C0D34', paddingRight: 10}}>
               {isEnabled ? 'ON' : 'OFF'}
             </Text>
-            <Switch onValueChange={this.toggleBluetooth} value={isEnabled} />
+            <Switch
+              trackColor={{false: '#767577', true: '#767577'}}
+              thumbColor={isEnabled ? '#f5dd4b' : '#f4f3f4'}
+              onValueChange={this.toggleBluetooth}
+              value={isEnabled}
+            />
           </View>
         </View>
 
@@ -490,8 +504,9 @@ class Bluetooth extends React.Component {
                 justifyContent: 'center',
               }}>
               <ActivityIndicator
-                style={{marginBottom: 15}}
-                size={Platform.OS === 'ios' ? 1 : 60}
+                size="large"
+                animating={scanning}
+                color="#0000ff"
               />
               <Button
                 textStyle={{color: '#fff'}}
@@ -506,25 +521,35 @@ class Bluetooth extends React.Component {
             {this.renderModal(device, processing)}
             <DeviceList
               devices={devices}
-              onDevicePressed={(device) => this.setState({device})}
+              onDevicePressed={(device) => {
+                this.setState({device});
+                this.selectedDevice();
+              }}
               onRefresh={this.listDevices}
             />
           </React.Fragment>
         )}
 
-        <View style={styles.footer}>
-          <ScrollView horizontal contentContainerStyle={styles.fixedFooter}>
-            {isEnabled && (
-              <Button
-                title="Discover more"
-                onPress={this.discoverUnpairedDevices}
-              />
-            )}
-            {!isEnabled && (
-              <Button title="Request enable" onPress={this.requestEnable} />
-            )}
-          </ScrollView>
-        </View>
+        {/* <View> */}
+        {/* <ScrollView horizontal contentContainerStyle={styles.fixedFooter}> */}
+        {isEnabled && (
+          <TouchableOpacity
+            style={styles.footerButton}
+            activeOpacity={0.5}
+            onPress={() => this.discoverUnpairedDevices}>
+            <Text>Start Scan</Text>
+          </TouchableOpacity>
+        )}
+        {!isEnabled && (
+          <TouchableOpacity
+            style={styles.footerButton}
+            activeOpacity={0.5}
+            onPress={() => this.requestEnable}>
+            <Text>Request Enable Bluetooth</Text>
+          </TouchableOpacity>
+        )}
+        {/* </ScrollView> */}
+        {/* </View> */}
       </SafeAreaView>
     );
   }

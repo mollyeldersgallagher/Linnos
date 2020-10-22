@@ -1,87 +1,95 @@
-import React from "react";
+import React from 'react';
 import {
   ScrollView,
   Text,
   TouchableHighlight,
   View,
-  RefreshControl
-} from "react-native";
-import styles from "../styles";
+  RefreshControl,
+  Button,
+} from 'react-native';
+import {TouchableOpacity} from 'react-native-gesture-handler';
+import styles from '../styles';
 
 class DeviceList extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      refreshing: false
+      refreshing: false,
     };
   }
 
-  onDevicePressed = device => () => {
-    if (typeof this.props.onDevicePressed === "function") {
+  onDevicePressed = (device) => () => {
+    if (typeof this.props.onDevicePressed === 'function') {
       this.props.onDevicePressed(device);
+      console.log(device);
     }
   };
 
   onRefresh = async () => {
-    if (typeof this.props.onRefresh === "function") {
-      this.setState({ refreshing: true });
+    if (typeof this.props.onRefresh === 'function') {
+      this.setState({refreshing: true});
       await this.props.onRefresh();
-      this.setState({ refreshing: false });
+      this.setState({refreshing: false});
     }
   };
 
   render() {
-    const { devices = [] } = this.props;
-    const { refreshing } = this.state;
+    const {devices = []} = this.props;
+    const {refreshing} = this.state;
 
     return (
       <ScrollView
         style={styles.container}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={this.onRefresh} />
-        }
-      >
+        }>
         <View style={styles.listContainer}>
-          {devices.map(device => (
+          {devices.map((device) => (
             <TouchableHighlight
               underlayColor="#eee"
               key={device.id}
               style={styles.listItem}
-              onPress={this.onDevicePressed(device)}
-            >
-              <View style={{ flexDirection: "column" }}>
-                <View style={{ flexDirection: "row" }}>
-                  <Text
-                    style={[
-                      styles.listItemStatus,
-                      {
-                        backgroundColor: device.paired ? "green" : "gray"
-                      }
-                    ]}
-                  >
-                    {device.paired ? "PAIRED" : "UNPAIRED"}
+              onPress={this.onDevicePressed(device)}>
+              <View style={{flexDirection: 'column'}}>
+                <View
+                  style={{
+                    flexDirection: 'column',
+                  }}>
+                  <Text style={{fontFamily: 'Roboto-Medium', fontSize: 18}}>
+                    {device.name}
                   </Text>
                   <Text
-                    style={[
-                      styles.listItemStatus,
-                      {
-                        backgroundColor: device.connected ? "green" : "gray",
-                        marginLeft: 5
-                      }
-                    ]}
-                  >
-                    {device.connected ? "CONNECTED" : "DISCONNECTED"}
-                  </Text>
+                    style={{
+                      fontFamily: 'NotoSansJP-Regular',
+                      fontSize: 14,
+                      marginTop: 0,
+                    }}>{`<${device.id}>`}</Text>
                 </View>
                 <View
                   style={{
-                    flexDirection: "column"
-                  }}
-                >
-                  <Text style={{ fontWeight: "bold", fontSize: 18 }}>
-                    {device.name}
+                    flexDirection: 'row',
+                    justifyContent: 'space-around',
+                  }}>
+                  <TouchableOpacity></TouchableOpacity>
+                  <Text
+                    style={[
+                      styles.listItemStatus,
+                      {
+                        backgroundColor: device.paired ? 'green' : 'gray',
+                      },
+                    ]}>
+                    {device.paired ? 'PAIRED' : 'UNPAIRED'}
                   </Text>
-                  <Text>{`<${device.id}>`}</Text>
+                  <Text
+                    style={[
+                      styles.listItemStatus,
+                      {
+                        backgroundColor: device.connected ? 'green' : 'gray',
+                        marginLeft: 5,
+                      },
+                    ]}>
+                    {device.connected ? 'CONNECTED' : 'DISCONNECTED'}
+                  </Text>
                 </View>
               </View>
             </TouchableHighlight>

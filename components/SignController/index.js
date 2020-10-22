@@ -32,6 +32,21 @@ import {
   getPrices,
 } from '../../services/Bluetooth/readWrite';
 
+function Price({navigation, title}) {
+  return (
+    <View style={styles.header}>
+      {/* icon for the menu */}
+      <TouchableOpacity
+        onPress={() => navigation.dispatch(DrawerActions.toggleDrawer())}
+        style={styles.icons}>
+        <Icon name="menu-outline" size={28} color="white" />
+      </TouchableOpacity>
+      <View style={styles.headerTitle}>
+        <Text style={styles.headerText}>{title}</Text>
+      </View>
+    </View>
+  );
+}
 export default class SignController extends React.Component {
   constructor(props) {
     super(props);
@@ -51,7 +66,7 @@ export default class SignController extends React.Component {
     };
   }
 
- async componentDidMount() {
+  async componentDidMount() {
     this.events = this.props.events;
     console.log(this.state.deviceId);
     // console.log(this.events);
@@ -60,27 +75,26 @@ export default class SignController extends React.Component {
     await this.setState({isVerified: isVerified});
     await console.log(this.state.isVerified);
 
-    if(isVerified){
+    if (isVerified) {
       let config = await getConfiguration(this.state.deviceId);
       this.setState({
         auto: config.auto,
         brightness: config.brightness,
-        config:config
-      })
+        config: config,
+      });
       let signPrices = await getPrices(this.state.deviceId);
       await this.setState({
         priceOne: signPrices[0],
-        priceTwo: signPrices[1]
-      })
+        priceTwo: signPrices[1],
+      });
       let lightStatus = await getLightingStatus(this.state.deviceId);
       await this.setState({
         extLight: lightStatus.extLight,
-        display: lightStatus.display
-      })
-      console.log(this.state.auto, this.state.extLight, this.state.display)
+        display: lightStatus.display,
+      });
+      console.log(this.state.auto, this.state.extLight, this.state.display);
     }
   }
-
 
   updatePrices(priceOne, priceTwo) {
     let priceDigits = [];
@@ -176,7 +190,7 @@ export default class SignController extends React.Component {
           {this.state.isVerified ? (
             <View style={{flex: 1}}>
               <Text style={{fontSize: 20, marginTop: 10}}> Update Sign </Text>
-
+              {}
               <View
                 style={{
                   flex: 2,
@@ -301,8 +315,8 @@ export default class SignController extends React.Component {
                   onPress={() => {
                     this.props.navigation.navigate('Admin', {
                       deviceId: this.state.deviceId,
-                      config: this.state.config
-                    })
+                      config: this.state.config,
+                    });
                   }}>
                   <Text style={styles.buttonText}>Admin Settings</Text>
                 </TouchableOpacity>
@@ -311,7 +325,6 @@ export default class SignController extends React.Component {
                   activeOpacity={0.5}
                   onPress={() => {
                     getConfiguration(this.state.deviceId);
-                    
                   }}>
                   <Text style={styles.buttonText}>Config</Text>
                 </TouchableOpacity>

@@ -7,36 +7,34 @@ import {
   StyleSheet,
   Image,
   TextInput,
+  Dimensions,
   TouchableOpacity,
-  Button,
 } from 'react-native';
-// import Slider from '@react-native-community/slider';
-// import {Col, Row, Grid} from 'react-native-easy-grid';
-// import hex2ascii from 'hex2ascii';
-// import hex from 'ascii-hex';
-import logo from '../assets/splash_icon.png';
+import led from '../assets/led.jpg';
+const windowWidth = Dimensions.get('window').width;
+const windowHeight = Dimensions.get('window').height;
 
-// import { Card, Button, withTheme } from "react-native-paper";
 
 function Home({navigation}) {
   return (
     <View style={styles.container}>
+       
       <View
         style={{
-          flex: 2,
+         // flex: 2,
           flexDirection: 'column',
-          margin: 10,
-          alignContent: 'center',
+          justifyContent: 'center',
+          // alignItems: 'center',
         }}>
-        <Image style={styles.logo} source={logo} />
+       <Image style={styles.led} source={led} /> 
       </View>
 
       <View style={{flex: 2, flexDirection: 'column', margin: 10}}>
-        <Text> INSERT INSTRUCTIONS AND INFO </Text>
-        <Text> 1 </Text>
-        <Text> 2 </Text>
-        <Text> 3 </Text>
-        <Text> 4 </Text>
+        <Text style={styles.subtitle}> Getting Started</Text>
+        <Text style={styles.description}> Step 1: Select the Linnos signs serial adapter </Text>
+        <Text style={styles.description}> Step 2: Connect to the serial adapter</Text>
+        <Text style={styles.description}> Step 3: Change the sign using the controller </Text>
+        
         <TouchableOpacity
           style={styles.button}
           activeOpacity={0.5}
@@ -52,8 +50,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
 
-    padding: 10,
-    paddingTop: 35,
+    // padding: 10,
+    paddingTop: 0,
     backgroundColor: '#ffffff',
   },
   logo: {
@@ -61,10 +59,30 @@ const styles = StyleSheet.create({
     height: 100,
     alignContent: 'center',
   },
+  led: {
+    width: windowWidth,
+    height:windowHeight*0.4 ,
+   // alignContent: 'center',
+    borderBottomRightRadius: 60,
+  },
   HeadStyle: {
     height: 50,
     alignContent: 'center',
     backgroundColor: '#bdbfdd',
+  },
+  subtitle:{
+    fontFamily: "Roboto-Regular",
+    fontSize: 23,
+    marginBottom:5,
+    marginTop:5,
+    color:"#0C0D34"
+  },
+  description:{
+    fontFamily: "NotoSansJP-Regular",
+    fontSize: 15,
+    marginLeft:5,
+    marginRight:5,
+    color:"#0C0D34"
   },
   button: {
     alignItems: 'center',
