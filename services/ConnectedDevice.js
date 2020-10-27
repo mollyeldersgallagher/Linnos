@@ -8,14 +8,21 @@ import {
   View,
   ActivityIndicator,
   Modal,
+  TouchableOpacity,
   Button,
+  Dimensions,
   PermissionsAndroid,
 } from 'react-native';
+import BluetoothFunctions from './Bluetooth';
+import {StyleSheet} from 'react-native';
+const windowWidth = Dimensions.get('window').width;
+const windowHeight = Dimensions.get('window').height;
+import {showMessage, hideMessage} from 'react-native-flash-message';
 
-import BluetoothSerial, {
-  withSubscription,
-} from 'react-native-bluetooth-serial-next';
+import Toast from '@remobile/react-native-toast';
+import BluetoothSerial from 'react-native-bluetooth-serial-next';
 import {Buffer} from 'buffer';
+import Bluetooth from './Bluetooth';
 
 global.Buffer = Buffer;
 
@@ -25,7 +32,12 @@ class ConnectedDevice extends React.Component {
   constructor(props) {
     super(props);
     this.events = null;
-    this.state = {};
+    this.params = this.props.route.params;
+    this.state = {
+      processing: this.params.processing,
+      device: this.params.device,
+      //connected: false,
+    };
   }
 
   async componentDidMount() {
@@ -38,90 +50,152 @@ class ConnectedDevice extends React.Component {
         );
       }
     });
-  }
-
-  render() {
-    // console.log('DEVICE' + device);
-    let device = {
-      id: 123456,
-      name: 'Serial Adapter',
-      paired: true,
-      connected: false,
-    };
-
-    if (!device) {
-      return null;
+    if (this.state.device.connected) {
+      this.toggleDeviceConnection(this.state.device);
     }
-
-    return (
-      //   <Modal
-      //     animationType="fade"
-      //     transparent={false}
-      //     visible={true}
-      //     onRequestClose={() => {}}>
-      //     {device ? (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: 'center',
-          alignItems: 'center',
-        }}>
-        <Text style={{fontSize: 18, fontWeight: 'bold'}}>{name}</Text>
-        <Text style={{fontSize: 14}}>{`<${id}>`}</Text>
-
-        {processing && (
-          <ActivityIndicator
-            style={{marginTop: 15}}
-            size={Platform.OS === 'ios' ? 1 : 60}
-          />
-        )}
-
-        {!processing && (
-          <View style={{marginTop: 20, width: '50%'}}>
-            {Platform.OS !== 'ios' && (
-              <Button
-                title={paired ? 'Unpair' : 'Pair'}
-                style={{
-                  backgroundColor: '#22509d',
-                }}
-                textStyle={{color: '#fff'}}
-                onPress={() => this.toggleDevicePairing(device)}
-              />
-            )}
-            <Button
-              title={connected ? 'Disconnect' : 'Connect'}
-              style={{
-                backgroundColor: '#22509d',
-              }}
-              textStyle={{color: '#fff'}}
-              onPress={() => this.toggleDeviceConnection(device)}
-            />
-            {connected && (
-              <React.Fragment>
-                <Button
-                  title="Sign Controller"
-                  style={{
-                    backgroundColor: '#22509d',
-                  }}
-                  textStyle={{color: '#fff'}}
-                  onPress={() => {
-                    this.callController(device);
-                  }}
-                />
-              </React.Fragment>
-            )}
-            <Button
-              title="Close"
-              onPress={() => this.setState({device: null})}
-            />
-          </View>
-        )}
-      </View>
-      // ) : null}
-      //   </Modal>
-    );
+    if (this.state.paired) {
+      this.toggleDevicePairing(this.state.device);
+    }
+    // this.toggleDeviceConnection(this.state.device);
+    // this.toggleDevicePairing(this.state.device);
   }
-  callController = (device) => {
+  toggleDevicePairing = async ({id, paired}) => {
+    if (paired) {
+      await this.unpairDevice(id);
+    } else {
+      await this.pairDevice(id);
+    }
+  };
+
+  pairDevice = async (id) => {
+    this.setState({processing: true});
+
+    try {
+      const paired = await BluetoothSerial.pairDevice(id);
+
+      if (paired) {
+        Toast.showShortBottom(
+          `Device ${paired.name}<${paired.id}> paired successfully`,
+        );
+
+        this.setState(({devices, device}) => ({
+          processing: false,
+          device: {
+            ...device,
+            ...paired,
+            paired: true,
+          },
+        }));
+      } else {
+        Toast.showShortBottom(`Device <${id}> pairing failed`);
+        this.setState({processing: false});
+      }
+    } catch (e) {
+      Toast.showShortBottom(e.message);
+      this.setState({processing: false});
+    }
+  };
+
+  unpairDevice = async (id) => {
+    this.setState({processing: true});
+
+    try {
+      const unpaired = await BluetoothSerial.unpairDevice(id);
+
+      if (unpaired) {
+        Toast.showShortBottom(
+          `Device ${unpaired.name}<${unpaired.id}> unpaired successfully`,
+        );
+
+        this.setState(({devices, device}) => ({
+          processing: false,
+          device: {
+            ...device,
+            ...unpaired,
+            connected: false,
+            paired: false,
+          },
+        }));
+      } else {
+        Toast.showShortBottom(`Device <${id}> unpairing failed`);
+        this.setState({processing: false});
+      }
+    } catch (e) {
+      Toast.showShortBottom(e.message);
+      this.setState({processing: false});
+    }
+  };
+
+  toggleDeviceConnection = async ({id, connected}) => {
+    if (connected) {
+      await this.disconnect(id);
+    } else {
+      await this.connect(id);
+    }
+  };
+
+  connect = async (id) => {
+    this.setState({processing: true});
+
+    try {
+      const connected = await BluetoothSerial.device(id).connect();
+
+      if (connected) {
+        // Toast.showShortBottom(
+        //   `Connected to device ${connected.name}<${connected.id}>. Verifying PIN..`,
+        // );
+        showMessage({
+          message: 'Connected ',
+          description: `Connection to device ${connected.name} successful`,
+          type: 'success',
+        });
+        this.setState(({device}) => ({
+          processing: false,
+          device: {
+            ...device,
+            ...connected,
+            connected: true,
+          },
+        }));
+      } else {
+        showMessage({
+          message: 'Connection Failed ',
+          description: `Failed to connect to device ${connected.name} <${id}>`,
+          type: 'warning',
+        });
+        // Toast.showShortBottom(`Failed to connect to device <${id}>`);
+        this.setState({processing: false});
+      }
+    } catch (e) {
+      // Toast.showShortBottom(e.message);
+      showMessage({
+        message: 'Error',
+        description: `An error has occured trying to connect to  ${connected.name} <${id}> please try again`,
+        type: 'error',
+      });
+      this.setState({processing: false});
+    }
+  };
+
+  disconnect = async (id) => {
+    this.setState({processing: true});
+
+    try {
+      await BluetoothSerial.device(id).disconnect();
+
+      this.setState(({devices, device}) => ({
+        processing: false,
+        device: {
+          ...device,
+          connected: false,
+        },
+      }));
+    } catch (e) {
+      Toast.showShortBottom(e.message);
+      this.setState({processing: false});
+    }
+  };
+  callSignController = (device) => {
     if (device) {
       this.props.navigation.navigate('SignController', {
         deviceId: this.state.device.id,
@@ -130,80 +204,155 @@ class ConnectedDevice extends React.Component {
       console.log('error no device found');
     }
   };
-  callConnectedDevice = (device) => {
+  callAdminController = (device) => {
     if (device) {
-      this.props.navigation.navigate('ConnectedDevice', {
+      this.props.navigation.navigate('PinCode', {
+        pinLength: 5,
+        pinValue: 16888,
+        type: 'Admin',
         deviceId: this.state.device.id,
-        device: device,
       });
     } else {
       console.log('error no device found');
     }
   };
+  render() {
+    return (
+      <>
+        {this.state.device ? (
+          <>
+            <View style={styles.topBar}>
+              <Text style={styles.heading}>{this.state.device.name}</Text>
+              <View style={styles.enableInfoWrapper}>
+                <Text>{this.state.device.id}</Text>
+              </View>
+            </View>
 
-  //   render() {
-  //     const {isEnabled, device, devices, scanning, processing} = this.state;
+            <View
+              style={{
+                flex: 1,
+              }}>
+              {this.state.processing && (
+                <ActivityIndicator
+                  style={{marginTop: 15}}
+                  size={Platform.OS === 'ios' ? 1 : 60}
+                  animating={this.state.processing}
+                  color="#64aabd"
+                />
+              )}
 
-  //     return (
-  //       <SafeAreaView style={{flex: 1}}>
-  //         <View style={styles.topBar}>
-  //           <Text style={styles.heading}>Bluetooth</Text>
-  //           <View style={styles.enableInfoWrapper}>
-  //             <Text style={{fontSize: 14, color: '#fff', paddingRight: 10}}>
-  //               {isEnabled ? 'ON' : 'OFF'}
-  //             </Text>
-  //             <Switch trackColor={{ false: "#767577", true: "#ffffff" }}
-  //         thumbColor={isEnabled ? "#f5dd4b" : "#f4f3f4"} onValueChange={this.toggleBluetooth} value={isEnabled} />
-  //           </View>
-  //         </View>
+              {!this.state.processing && (
+                <>
+                  <View style={styles.topBarButtons}>
+                    {Platform.OS !== 'ios' && (
+                      <TouchableOpacity
+                        onPress={() =>
+                          this.toggleDevicePairing(this.state.device)
+                        }
+                        style={styles.buttons}>
+                        <Text style={styles.buttonText}>
+                          {this.state.device.paired ? 'UNPAIR' : 'PAIR'}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                    <TouchableOpacity
+                      style={styles.buttons}
+                      onPress={() =>
+                        this.toggleDeviceConnection(this.state.device)
+                      }>
+                      <Text style={styles.buttonText}>
+                        {this.state.device.connected ? 'DISCONNECT' : 'CONNECT'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
 
-  //         {scanning ? (
-  //           isEnabled && (
-  //             <View
-  //               style={{
-  //                 flex: 1,
-  //                 alignItems: 'center',
-  //                 justifyContent: 'center',
-  //               }}>
-  //               <ActivityIndicator
-  //                 style={{marginBottom: 15}}
-  //                 size={Platform.OS === 'ios' ? 1 : 60}
-  //               />
-  //               <Button
-  //                 textStyle={{color: '#fff'}}
-  //                 style={styles.buttonRaised}
-  //                 title="Cancel Discovery"
-  //                 onPress={this.cancelDiscovery}
-  //               />
-  //             </View>
-  //           )
-  //         ) : (
-  //           <React.Fragment>
-  //             {this.renderModal(device, processing)}
-  //             <DeviceList
-  //               devices={devices}
-  //               onDevicePressed={(device) => this.setState({device})}
-  //               onRefresh={this.listDevices}
-  //             />
-  //           </React.Fragment>
-  //         )}
+                  <View>
+                    {this.state.device.connected && (
+                      <React.Fragment>
+                        <TouchableOpacity
+                          style={styles.buttons}
+                          onPress={() => {
+                            this.callSignController(this.state.device);
+                          }}>
+                          <Text style={styles.buttonText}>Sign Controller</Text>
+                        </TouchableOpacity>
 
-  //         <View style={styles.footer}>
-  //           <ScrollView horizontal contentContainerStyle={styles.fixedFooter}>
-  //             {isEnabled && (
-  //               <Button
-  //                 title="Discover more"
-  //                 onPress={this.discoverUnpairedDevices}
-  //               />
-  //             )}
-  //             {!isEnabled && (
-  //               <Button title="Request enable" onPress={this.requestEnable} />
-  //             )}
-  //           </ScrollView>
-  //         </View>
-  //       </SafeAreaView>
-  //     );
-  //   }
+                        <TouchableOpacity
+                          style={styles.buttons}
+                          onPress={() => {
+                            this.callAdminController(this.state.device);
+                          }}>
+                          <Text style={styles.buttonText}>
+                            Admin Controller
+                          </Text>
+                        </TouchableOpacity>
+                      </React.Fragment>
+                    )}
+                    {/* <Button
+                      title="Close"
+                      onPress={() => this.setState({device: null})}
+                    /> */}
+                  </View>
+                </>
+              )}
+            </View>
+          </>
+        ) : null}
+        <View></View>
+      </>
+    );
+  }
 }
 
-export default withSubscription({subscriptionName: 'events'})(ConnectedDevice);
+const styles = StyleSheet.create({
+  container: {
+    flex: 0.9,
+    backgroundColor: '#f5fcff',
+  },
+  topBar: {
+    height: 56,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomWidth: 5,
+    borderBottomColor: '#64aabd',
+    backgroundColor: '#fff',
+  },
+  topBarButtons: {
+    height: 56,
+    width: windowWidth,
+    // paddingHorizontal: 16,
+    margin: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    borderBottomWidth: 5,
+    borderBottomColor: '#64aabd',
+    backgroundColor: '#fff',
+  },
+  heading: {
+    fontSize: 18,
+    alignSelf: 'center',
+    fontFamily: 'Roboto-Regular',
+    marginBottom: 5,
+    marginTop: 5,
+    color: '#0C0D34',
+  },
+  buttons: {
+    width: windowWidth / 2,
+    height: 56,
+    borderWidth: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderColor: '#38a4c0',
+    color: '#fff',
+  },
+  buttonText: {
+    margin: 5,
+    color: '#38a4c0',
+    fontSize: 15,
+  },
+});
+
+export default ConnectedDevice;

@@ -21,42 +21,50 @@ import {
   asciiToHex,
   writePackets,
   getConfiguration,
-  getFirmware
+  getFirmware,
 } from '../../services/Bluetooth/readWrite';
 
 export default class AdminController extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      lines: '1',
-      digits: '8',
+      lines: null,
+      digits: null,
       auto: true,
-      serial: '3',
-      configured:null,
-      config:this.props.route.params.config,
+      serial: null,
+      configured: null,
+      config: this.props.route.params.config,
       deviceId: this.props.route.params.deviceId,
     };
   }
 
- async componentDidMount() {
-    console.log(this.state.deviceId);
-
-    let isVerified = await verifyPin(3000, this.state.deviceId);
+  async componentDidMount() {
+    let isVerified = await verifyPin(this.state.deviceId);
     await this.setState({isVerified: isVerified});
-    console.log(this.state.isVerified);
-    await this.setState({
-      lines: this.state.config.lines,
-      digits:this.state.config.digits,
-      auto:this.state.config.auto,
-      serial:this.state.config.serial,
-      configured:this.state.config.configured
-      
-    })
+    if (this.state.isVerified) {
+      let config = await getConfiguration(this.state.deviceId);
+      this.setState({
+        auto: config.auto,
+        brightness: config.brightness,
+        lines: config.lines,
+        digits: config.digits,
+        config: config,
+        serial: config.serial,
+        configured: config.configured,
+      });
+    }
+    // await this.setState({
+    //   lines: this.state.config.lines,
+    //   digits: this.state.config.digits,
+    //   auto: this.state.config.auto,
+    //   serial: this.state.config.serial,
+    //   configured: this.state.config.configured,
+    // });
     let firmware = await getFirmware(this.state.deviceId);
-    console.log(firmware)
-   await this.setState({
-     firmware: firmware
-   })
+
+    await this.setState({
+      firmware: firmware,
+    });
   }
   handleLines(lines) {
     this.setState({lines: lines});
@@ -74,7 +82,6 @@ export default class AdminController extends React.Component {
       this.state.autoValue,
     ]);
     commandHandler(17, dataBuffer, this.state.deviceId);
-    console.log(dataBuffer);
   }
 
   handleAutoBrightness() {
@@ -140,7 +147,7 @@ export default class AdminController extends React.Component {
                   // placeholder="Serial Protocol"
                 />
               </View>
-           
+
               <View style={{flex: 2, flexDirection: 'row', margin: 10}}>
                 <Text style={styles.header}>Auto Brightness</Text>
 
@@ -166,12 +173,14 @@ export default class AdminController extends React.Component {
                 </TouchableOpacity>
               </View>
               <View style={{flex: 2, flexDirection: 'column', margin: 10}}>
-                <Text style={styles.header}>Configured: {this.state.configured}</Text>
-              
+                <Text style={styles.header}>
+                  Configured: {this.state.configured}
+                </Text>
               </View>
               <View style={{flex: 2, flexDirection: 'column', margin: 10}}>
-                <Text style={styles.header}>Firmware: {this.state.firmware}</Text>
-                
+                <Text style={styles.header}>
+                  Firmware: {this.state.firmware}
+                </Text>
               </View>
             </View>
           ) : (
@@ -180,7 +189,7 @@ export default class AdminController extends React.Component {
                 style={styles.button}
                 activeOpacity={0.5}
                 onPress={() => {
-                  verifyPin(3000, this.state.deviceId);
+                  verifyPin(this.state.deviceId);
                 }}>
                 <Text style={styles.buttonText}>Verify Pin</Text>
               </TouchableOpacity>

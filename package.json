@@ -24,6 +24,7 @@
     "react-native-bluetooth-serial-next": "^1.2.3",
     "react-native-confirmation-code-field": "^6.5.0",
     "react-native-easy-grid": "^0.2.2",
+    "react-native-flash-message": "^0.1.16",
     "react-native-gesture-handler": "^1.8.0",
     "react-native-reanimated": "^1.13.1",
     "react-native-safe-area-context": "^3.1.8",

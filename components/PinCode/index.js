@@ -7,16 +7,16 @@ import {
   Button,
   TouchableNativeFeedback,
   Alert,
-} from "react-native";
-import React, { useState } from "react";
+} from 'react-native';
+import React, {useState, useEffect} from 'react';
 
 import {
   CodeField,
   Cursor,
   useBlurOnFulfill,
   useClearByFocusCell,
-} from "react-native-confirmation-code-field";
-import { useNavigation } from "@react-navigation/native";
+} from 'react-native-confirmation-code-field';
+import {useNavigation} from '@react-navigation/native';
 
 import styles, {
   ACTIVE_CELL_BG_COLOR,
@@ -24,53 +24,76 @@ import styles, {
   CELL_SIZE,
   DEFAULT_CELL_BG_COLOR,
   NOT_EMPTY_CELL_BG_COLOR,
-} from "./styles";
+} from './styles';
 
-const { Value, Text: AnimatedText } = Animated;
-
-const CELL_COUNT = 4;
-const PIN = "3683";
-
-// ------ ANIMATION OF PASSCODE CELLS --------//
-const animationsColor = [...new Array(CELL_COUNT)].map(() => new Value(0));
-const animationsScale = [...new Array(CELL_COUNT)].map(() => new Value(1));
-const animateCell = ({ hasValue, index, isFocused }) => {
-  Animated.parallel([
-    Animated.timing(animationsColor[index], {
-      useNativeDriver: false,
-      toValue: isFocused ? 1 : 0,
-      duration: 250,
-    }),
-    Animated.spring(animationsScale[index], {
-      useNativeDriver: false,
-      toValue: hasValue ? 0 : 1,
-      duration: hasValue ? 300 : 250,
-    }),
-  ]).start();
-};
+const {Value, Text: AnimatedText} = Animated;
 
 // ------ PIN CODE FUNCTIONAL COMPONENT EXPORTED ------////
-const PinCode = () => {
+const PinCode = ({navigation, route}) => {
   // hook setting state
-  const navigation = useNavigation();
-  const [value, setValue] = useState("");
-  const ref = useBlurOnFulfill({ value, cellCount: CELL_COUNT });
+  // useEffect(() => {
+
+  let CELL_COUNT = route.params.pinLength;
+  let PIN = route.params.pinValue.toString();
+  let TYPE = route.params.type;
+  // const PIN = 3683;
+  console.log(CELL_COUNT + '   ' + PIN);
+  // ------ ANIMATION OF PASSCODE CELLS --------//
+  const animationsColor = [...new Array(CELL_COUNT)].map(() => new Value(0));
+  const animationsScale = [...new Array(CELL_COUNT)].map(() => new Value(1));
+  const animateCell = ({hasValue, index, isFocused}) => {
+    Animated.parallel([
+      Animated.timing(animationsColor[index], {
+        useNativeDriver: false,
+        toValue: isFocused ? 1 : 0,
+        duration: 250,
+      }),
+      Animated.spring(animationsScale[index], {
+        useNativeDriver: false,
+        toValue: hasValue ? 0 : 1,
+        duration: hasValue ? 300 : 250,
+      }),
+    ]).start();
+    return PIN, CELL_COUNT;
+  };
+  //
+  // }, []);
+  const [value, setValue] = useState('');
+  const ref = useBlurOnFulfill({value, cellCount: CELL_COUNT});
   const [props, getCellOnLayoutHandler] = useClearByFocusCell({
     value,
     setValue,
   });
 
   const pinVerification = () => {
+    console.log(typeof PIN + typeof value);
     if (PIN === value) {
-      Alert.alert(`correct pin ${value}`);
-      navigation.navigate("Home");
+      Alert.alert(`Correct Pin`);
+      if (TYPE === 'Admin') {
+        navigation.navigate('Admin', {
+          correctPin: true,
+          deviceId: route.params.deviceId,
+        });
+        TYPE = 'Initial';
+        PIN = '3683';
+        CELL_COUNT = 4;
+      } else if (TYPE === 'Initial') {
+        navigation.navigate('Home', {
+          correctPin: true,
+        });
+        TYPE = 'Admin';
+        PIN = '16888';
+        CELL_COUNT = 5;
+      }
     } else {
-      Alert.alert(`wrong pin ${value}`);
-      navigation.navigate("PinCode");
+      Alert.alert(`Incorrect Pin`);
+      navigation.navigate('PinCode', {
+        correctPin: false,
+      });
     }
   };
 
-  const renderCell = ({ index, symbol, isFocused }) => {
+  const renderCell = ({index, symbol, isFocused}) => {
     const hasValue = Boolean(symbol);
     const animatedCellStyle = {
       backgroundColor: hasValue
@@ -99,15 +122,14 @@ const PinCode = () => {
     // Run animation on next event loop tik
     // Because we need first return new style prop and then animate this value
     setTimeout(() => {
-      animateCell({ hasValue, index, isFocused });
+      animateCell({hasValue, index, isFocused});
     }, 0);
 
     return (
       <AnimatedText
         key={index}
         style={[styles.cell, animatedCellStyle]}
-        onLayout={getCellOnLayoutHandler(index)}
-      >
+        onLayout={getCellOnLayoutHandler(index)}>
         {symbol || (isFocused ? <Cursor /> : null)}
       </AnimatedText>
     );
@@ -115,7 +137,7 @@ const PinCode = () => {
 
   return (
     <SafeAreaView style={styles.root}>
-      <Text style={styles.title}>Verification</Text>
+      <Text style={styles.title}>{TYPE} Verification</Text>
 
       <Text style={styles.subTitle}>Please enter your four digit pin </Text>
 
@@ -135,8 +157,7 @@ const PinCode = () => {
         onPress={() => {
           pinVerification();
           // () => props.navigate("Home");
-        }}
-      >
+        }}>
         <View style={styles.nextButton}>
           <Text style={styles.nextButtonText}>Verify</Text>
         </View>

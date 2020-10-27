@@ -21,7 +21,6 @@ class DeviceList extends React.Component {
   onDevicePressed = (device) => () => {
     if (typeof this.props.onDevicePressed === 'function') {
       this.props.onDevicePressed(device);
-      console.log(device);
     }
   };
 

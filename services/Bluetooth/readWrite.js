@@ -3,31 +3,13 @@ import BluetoothSerial from 'react-native-bluetooth-serial-next';
 global.Buffer = Buffer;
 const iconv = require('iconv-lite');
 import crc from 'crc';
+import {showMessage, hideMessage} from 'react-native-flash-message';
 
-export const saveState = async (id) => {
-  const device = await BluetoothSerial.device(id);
-  buffer = Buffer.from([0x02, 14, 0]);
-  packet = Buffer.concat([
-    buffer,
-    Buffer.from(splitCRC(crc.crc16xmodem(buffer))),
-  ]);
-
-  let writePromise = await device.write(packet);
-
-  await Promise.all(writePromise).then(
-    console.log('Packets Written ' + message),
-  );
-  // await wait(1000);
-  const response = await BluetoothSerial.readFromDevice(id);
-  await Promise.all(response).then(
-    console.log('Response Recieved ' + response),
-  );
-};
-async function wait(ms) {
+export const wait = async (ms) => {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
-}
+};
 writePackets = async (id, message, packetSize = 64) => {
   let response;
   try {
@@ -42,36 +24,85 @@ writePackets = async (id, message, packetSize = 64) => {
     await Promise.all(response).then(
       console.log('Response Recieved ' + response),
     );
+
+    if (response.substring(0, 2) === '20') {
+      console.log('RES OK');
+      showMessage({
+        message: 'Successful',
+        description: 'Sign updated sucessfully',
+        type: 'success',
+      });
+    } else if (response === '' || response === null || response === []) {
+      console.log('RES NOT OK');
+      showMessage({
+        message: 'Response ',
+        description:
+          'It looks the sign didnt send a response. If the sign did not update please try again.',
+        type: 'warning',
+      });
+    } else {
+      showMessage({
+        message: 'Error',
+        description:
+          'An error occured please try again and check bluetooth device is connected',
+        type: 'danger',
+      });
+    }
   } catch (e) {
     console.log(e.message);
   }
   return response;
-  // readresponse();
 };
-export const write = async (id, message) => {
+/**
+ * verify pin command
+ * this needs to be sent before changing any values
+ * component did mount after connecting to blue tooth
+ * @param timeout timeout in milliseconds and deviceId
+ */
+export const verifyPin = async (id) => {
+  // Buffer that holds the command to send the pin "3683" to the pole, to allow config to be modified.
+  // 0x02 - Start of text byte
+  let pin = 3683;
+  let buffer = Buffer.from([0x02, 0x14, 0x04, 0x33, 0x36, 0x38, 0x33]);
+  //console.log(crc.crc16xmodem(buffer));
+  let finalBuffer = Buffer.concat([
+    buffer,
+    Buffer.from(splitCRC(crc.crc16xmodem(buffer))),
+  ]);
+  console.log('pin buffer' + finalBuffer);
+  let message = finalBuffer;
   try {
-    await BluetoothSerial.device(id).write(message);
-    Toast.showShortBottom('Successfuly wrote to device');
-  } catch (e) {
-    Toast.showShortBottom(e.message);
-  }
-};
+    const device = await BluetoothSerial.device(id);
+    let writePromise = await device.write(message);
 
-const readresponse = async (id) => {
-  // const okRes = Buffer.from(['\x00']);
-  try {
-    const response = await BluetoothSerial.readFromDevice(id);
-    await Promise.all(response).then(
-      console.log('response Recieved ' + response),
+    await Promise.all(writePromise).then(
+      console.log('Packets Written ' + message),
     );
+    await wait(1000);
+    response = await BluetoothSerial.readFromDevice(id);
+    await Promise.all(response).then(
+      console.log('Response Recieved ' + response),
+    );
+
+    if (response.substring(0, 2) === '20') {
+      console.log('RES OK');
+    } else {
+      console.log('RES NOT OK');
+    }
+    return true;
   } catch (e) {
     console.log(e.message);
+    return false;
   }
+  // return response;
 };
-
 export const getConfiguration = async (id) => {
-  let timeout = 5000;
   let config = {};
+  let result = {
+    resCode: null,
+    data: null,
+    resMessage: null,
+  };
 
   try {
     let newBuffer;
@@ -80,11 +111,9 @@ export const getConfiguration = async (id) => {
       buffer,
       Buffer.from(splitCRC(crc.crc16xmodem(buffer))),
     ]);
-    // let config = writePackets(id, newBuffer);
-    console.log('configuration ');
+
     const device = await BluetoothSerial.device(id);
     let writePromise = await device.write(newBuffer);
-
     await Promise.all(writePromise).then(
       console.log('Packets Written ' + newBuffer),
     );
@@ -94,7 +123,6 @@ export const getConfiguration = async (id) => {
       console.log('Response Recieved ' + response),
     );
 
-    console.log(response.length);
     var res = response.substring(0, 2);
     if (response.length > 5 && response.substring(0, 3) === '206') {
       switch (response.charAt(3)) {
@@ -144,20 +172,14 @@ export const getConfiguration = async (id) => {
   } else if (config.auto === 0) {
     config.auto = false;
   }
-  const hextoascci = (hex) => {
-    var output = new Buffer(hex, 'hex');
-    let result = output.toString();
-    return result;
-  };
+
   return config;
 };
 
 export const getLightingStatus = async (id) => {
-  let timeout = 5000;
   let lightStatus = {
     display: 1,
     extLight: 0,
-    // brightness: 45,
   };
 
   try {
@@ -167,21 +189,20 @@ export const getLightingStatus = async (id) => {
       buffer,
       Buffer.from(splitCRC(crc.crc16xmodem(buffer))),
     ]);
-    // let config = writePackets(id, newBuffer);
-    console.log('configuration ');
+
+    await wait(1000);
     const device = await BluetoothSerial.device(id);
     let writePromise = await device.write(newBuffer);
 
     await Promise.all(writePromise).then(
-      console.log('Packets Written ' + newBuffer),
+      console.log('Lighting Packet Written ' + newBuffer),
     );
-    await wait(1000);
+    await wait(2000);
     const response = await BluetoothSerial.readFromDevice(id);
     await Promise.all(response).then(
-      console.log('Response Recieved ' + response),
+      console.log('Lighting Response Recieved ' + response),
     );
 
-    console.log(response.length);
     var res = response.substring(0, 2);
     if (response.length > 5 && response.substring(0, 3) === '203') {
       //display check
@@ -200,12 +221,10 @@ export const getLightingStatus = async (id) => {
   } catch (e) {
     console.log(e.message);
   }
-  console.log(lightStatus);
   return lightStatus;
 };
 export const getPrices = async (id, lines, digits) => {
   let priceArray = [];
-  // let timeout = 5000;
   try {
     let newBuffer;
     let buffer = Buffer.from([0x02, 16, 0]);
@@ -218,23 +237,28 @@ export const getPrices = async (id, lines, digits) => {
 
     let writePromise = await device.write(newBuffer);
 
-    await Promise.all(writePromise).then(console.log('Packets Written'));
-    await wait(3000);
+    await Promise.all(writePromise).then(console.log('Price Packet Written'));
+    await wait(1000);
     const response = await BluetoothSerial.readFromDevice(id);
     await Promise.all(response).then(
-      console.log('Response Recieved ' + response),
+      console.log('Price Response Recieved ' + response),
     );
 
     var res = response.substring(0, 2);
-    if (response.length > 5 && response.substring(0, 3) === '208') {
+    if (response.substring(0, 2) === '20') {
       let prices = response.substring(3, digits * 2 * lines + 3);
-      console.log(prices);
       var output = new Buffer(prices, 'hex');
       for (let i = 0; i <= output.length; i = i + digits) {
         //times 2 is to account for the two digits of hex values
-        console.log(i);
         priceArray.push(output.toString().substring(i, i + digits));
+        console.log(output.toString().substring(i, i + digits));
       }
+    } else if (
+      response.substring(0, 2) === '21' ||
+      response.substring(0, 2) === '22' ||
+      response.substring(0, 2) === '23'
+    ) {
+      console.log('RES NOT OK');
     }
   } catch (e) {
     console.log(e.message);
@@ -245,7 +269,7 @@ export const getPrices = async (id, lines, digits) => {
 export const getFirmware = async (id) => {
   let firmware;
   let firmwareStr;
-  // let timeout = 5000;
+
   try {
     let newBuffer;
     let buffer = Buffer.from([0x02, 23, 0]);
@@ -258,11 +282,13 @@ export const getFirmware = async (id) => {
 
     let writePromise = await device.write(newBuffer);
 
-    await Promise.all(writePromise).then(console.log('Packets Written'));
-    await wait(3000);
+    await Promise.all(writePromise).then(
+      console.log('Firmware Packet Written'),
+    );
+    await wait(1000);
     const response = await BluetoothSerial.readFromDevice(id);
     await Promise.all(response).then(
-      console.log('Response Recieved ' + response),
+      console.log('Firmware Response Recieved ' + response),
     );
 
     var res = response.substring(0, 2);
@@ -270,7 +296,6 @@ export const getFirmware = async (id) => {
       firmware = response.substring(3, 11);
       var output = new Buffer(firmware, 'hex');
       firmwareStr = output.toString();
-      console.log(firmwareStr);
     }
   } catch (e) {
     console.log(e.message);
@@ -278,42 +303,7 @@ export const getFirmware = async (id) => {
   return firmwareStr;
 };
 
-/**
- * verify pin command
- * this needs to be sent before changing any values
- * component did mount after connecting to blue tooth
- * @param timeout timeout in milliseconds and deviceId
- */
-export const verifyPin = (timeout, deviceId) => {
-  // Buffer that holds the command to send the pin "3683" to the pole, to allow config to be modified.
-  // 0x02 - Start of text byte
-  let pin = 3683;
-
-  let pinDigits = Array.from(pin.toString()).map(Number);
-
-  let dataLengthBuffer = Buffer.from([pinDigits.length]);
-
-  let hexDigits = pinDigits.map((d) => asciiToHex(d));
-  let pinBuffer = Buffer.from(hexDigits);
-
-  let buffer = Buffer.from([0x02, 0x14, 0x04, 0x33, 0x36, 0x38, 0x33]);
-  //console.log(crc.crc16xmodem(buffer));
-  let finalBuffer = Buffer.concat([
-    buffer,
-    Buffer.from(splitCRC(crc.crc16xmodem(buffer))),
-  ]);
-  console.log('pin buffer' + finalBuffer);
-  try {
-    writePackets(deviceId, finalBuffer);
-    return true;
-  } catch (e) {
-    console.log(e);
-    return false;
-  }
-};
-
 export const commandHandler = (command, data, id) => {
-  console.log(command, data, id);
   let buffer, finalBuffer, newBuffer;
   if (Buffer.isBuffer(data)) {
     buffer = Buffer.from([0x02, command, data.length]);
@@ -329,7 +319,6 @@ export const commandHandler = (command, data, id) => {
       Buffer.from(splitCRC(crc.crc16xmodem(buffer))),
     ]);
   }
-
   writePackets(id, finalBuffer);
 };
 export const priceCommandHandler = (
@@ -344,6 +333,26 @@ export const priceCommandHandler = (
     Buffer.from(splitCRC(crc.crc16xmodem(newBuffer))),
   ]);
   writePackets(deviceId, finalBuffer);
+};
+
+export const saveState = async (id) => {
+  const device = await BluetoothSerial.device(id);
+  buffer = Buffer.from([0x02, 14, 0]);
+  packet = Buffer.concat([
+    buffer,
+    Buffer.from(splitCRC(crc.crc16xmodem(buffer))),
+  ]);
+
+  let writePromise = await device.write(packet);
+
+  await Promise.all(writePromise).then(
+    console.log(' Save Packet Written ' + message),
+  );
+  await wait(2000);
+  const response = await BluetoothSerial.readFromDevice(id);
+  await Promise.all(response).then(
+    console.log('Save Response Recieved ' + response),
+  );
 };
 export const changeBase = (number, fromBase, toBase) => {
   if (fromBase == 10) return parseInt(number).toString(toBase);
@@ -364,7 +373,7 @@ export const splitCRC = (crc) => {
     hb = '0' + c.slice(0, 1);
     lb = c.slice(1, 4);
   }
-  console.log(parseInt(hb, 16), parseInt(lb, 16));
+
   return [parseInt(hb, 16), parseInt(lb, 16)];
 };
 export const asciiToHex = (asciiNumber) => {
@@ -391,46 +400,3 @@ export const asciiToHex = (asciiNumber) => {
       return 0x30;
   }
 };
-export const hexToAscii = (hexNumber) => {
-  switch (hexNumber) {
-    case 0x31:
-    case 31:
-      return 1;
-    case 0x32:
-    case 32:
-      return 2;
-    case 0x33:
-    case 33:
-      return 3;
-    case 0x34:
-    case 34:
-      return 4;
-    case 0x35:
-    case 35:
-      return 5;
-    case 0x36:
-    case 36:
-      return 6;
-    case 0x37:
-    case 37:
-      return 7;
-    case 0x38:
-    case 38:
-      return 8;
-    case 0x39:
-    case 39:
-      return 9;
-    default:
-      return 0;
-  }
-};
-// function unpack(str) {
-
-//   var bytes = [];
-//   for (var i = 0; i < str.length; i++) {
-//     var char = str.charCodeAt(i);
-//     bytes.push(char >>> 8);
-//     bytes.push(char & 0xff);
-//   }
-//   return bytes;
-//}

@@ -26,10 +26,10 @@ import {
   priceCommandHandler,
   asciiToHex,
   saveState,
-  writePackets,
   getConfiguration,
   getLightingStatus,
   getPrices,
+  wait,
 } from '../../services/Bluetooth/readWrite';
 
 export default class SignController extends React.Component {
@@ -37,13 +37,9 @@ export default class SignController extends React.Component {
     super(props);
     this.state = {
       isVerified: false,
-      text: undefined,
-      scannedData: [],
-      display: false,
-      priceOne: '1234',
-      priceTwo: '1234',
+      display: true,
       auto: false,
-      extLight: false,
+      readingData: true,
       brightness: 45,
       config: {},
       prices: [],
@@ -52,17 +48,26 @@ export default class SignController extends React.Component {
       // events: this.props.route.params.events,
     };
   }
-
   async componentDidMount() {
-    this.events = this.props.events;
-    console.log(this.state.deviceId);
-    // console.log(this.events);
-
-    let isVerified = await verifyPin(3000, this.state.deviceId);
+    let isVerified = await verifyPin(this.state.deviceId);
     await this.setState({isVerified: isVerified});
     await console.log(this.state.isVerified);
+    this.setup();
+    this.focusListener = navigation.addListener('didFocus', () => {
+      // The screen is focused
+      // Call any action
+      this.setup();
+    });
+    // console.log(this.state.auto, this.state.extLight, this.state.display);
+  }
+  // componentWillUnmount() {
+  //   // Remove the event listener
+  //   this.focusListener.remove();
+  // }
 
-    if (isVerified) {
+  async setup() {
+    if (this.state.isVerified) {
+      console.log('DEVICE ID' + this.state.deviceId);
       let config = await getConfiguration(this.state.deviceId);
       this.setState({
         auto: config.auto,
@@ -71,21 +76,30 @@ export default class SignController extends React.Component {
         digits: parseInt(config.digits),
         config: config,
       });
+    }
+    if (this.state.config !== []) {
       let signPrices = await getPrices(
         this.state.deviceId,
         this.state.lines,
         this.state.digits,
       );
-      await this.setState({
+
+      this.setState({
         prices: signPrices,
         newPrices: signPrices,
       });
+    }
+    if (this.state.prices !== []) {
       let lightStatus = await getLightingStatus(this.state.deviceId);
-      await this.setState({
+      this.setState({
         extLight: lightStatus.extLight,
         display: lightStatus.display,
       });
-      console.log(this.state.auto, this.state.extLight, this.state.display);
+      this.setState({
+        readingData: false,
+      });
+    } else {
+      console.log('ERROR READING DATA');
     }
   }
 
@@ -97,7 +111,7 @@ export default class SignController extends React.Component {
     let dataLengthBuffer;
 
     priceDigits = prices.join('');
-    console.log(prices);
+
     priceDigits = Array.from(prices.join('')).map(Number);
 
     dataLengthBuffer = Buffer.from([priceDigits.length]);
@@ -106,25 +120,16 @@ export default class SignController extends React.Component {
 
     let priceBuffer = Buffer.from(hexDigits);
 
-    console.log(dataLengthBuffer);
-    console.log(priceBuffer);
     priceCommandHandler(dataLengthBuffer, priceBuffer, this.state.deviceId);
   }
   handlePrices(price, index) {
-    console.log(index - 1, price);
-    // let newArray = new Array(this.state.lines - 1);
     let newArray = [...this.state.newPrices];
     newArray[index - 1] = parseInt(price);
     this.setState({newPrices: newArray});
-    console.log(newArray);
   }
-  handlePriceOne(priceOne) {
-    this.setState({priceOne: priceOne});
-  }
-  handlePriceTwo(priceTwo) {
-    this.setState({priceTwo: priceTwo});
-  }
+
   handleDisplay() {
+    this.setState({display: !this.state.display});
     let data;
     if (this.state.display) {
       data = [0];
@@ -160,7 +165,7 @@ export default class SignController extends React.Component {
       data = [75];
       console.log('Brightness : LOW');
     }
-    console.log(data);
+
     commandHandler(11, data, this.state.deviceId);
   }
   saveAll() {
@@ -180,15 +185,15 @@ export default class SignController extends React.Component {
       data = [1];
       console.log('Auto : ON');
     }
-    console.log(data);
+
     commandHandler(12, data, this.state.deviceId);
   }
 
   render() {
     let priceInputs = [];
-    console.log(this.state.lines);
+    console.log(this.state);
+
     for (let i = 1; i <= this.state.lines; i++) {
-      // let index = i - 1;
       priceInputs.push(
         <View
           style={{
@@ -200,7 +205,7 @@ export default class SignController extends React.Component {
 
           <TextInput
             style={styles.input}
-            // name={index}
+            key={`input${i}`}
             onChangeText={(text) => this.handlePrices(text, i)}
             keyboardType={'numeric'}
             placeholder="Price one in format 1234 for 123.4"
@@ -213,161 +218,133 @@ export default class SignController extends React.Component {
     return (
       <Container>
         <ScrollView>
-          {this.state.isVerified ? (
-            <View style={{flex: 1}}>
-              <Text style={{fontSize: 20, marginTop: 10}}> Update Sign </Text>
-              {priceInputs}
-              {/* <View
-                style={{
-                  flex: 2,
-                  flexDirection: 'column',
-                  margin: 10,
-                }}>
-                {this.state.prices.map(price =>())}
-                <Text style={styles.header}>Price 1</Text>
-
-                <TextInput
-                  style={styles.input}
-                  onChangeText={(text) => this.handlePriceOne(text)}
-                  keyboardType={'numeric'}
-                  placeholder="Price one in format 1234 for 123.4"
-                  maxLength={4}
-                  value={this.state.priceOne}
-                />
-              </View>
-              <View style={{flex: 2, flexDirection: 'column', margin: 10}}>
-                <Text style={styles.header}>Price 2</Text>
-                <TextInput
-                  style={styles.input}
-                  onChangeText={(text) => this.handlePriceTwo(text)}
-                  keyboardType={'numeric'}
-                  maxLength={4}
-                  value={this.state.priceTwo}
-                  placeholder="Price two in format 1234 for 123.4"
-                />
-              </View> */}
-
-              <View style={{flex: 1, flexDirection: 'column', margin: 10}}>
-                <TouchableOpacity
-                  style={styles.button}
-                  activeOpacity={0.5}
-                  onPress={() => {
-                    this.updatePrices();
-                  }}>
-                  <Text style={styles.buttonText}>Update Prices</Text>
-                </TouchableOpacity>
-              </View>
-              <View style={{flex: 2, flexDirection: 'row', margin: 10}}>
-                <Text style={styles.header}>Display </Text>
-
-                <Switch
-                  trackColor={{false: '#767577', true: '#38a4c0'}}
-                  thumbColor={this.state.display ? '#f5dd4b' : '#f4f3f4'}
-                  ios_backgroundColor="#3e3e3e"
-                  onValueChange={() => {
-                    this.setState({display: !this.state.display});
-                    this.handleDisplay();
-                  }}
-                  value={this.state.display}
-                />
-              </View>
-
-              <View style={{flex: 2, flexDirection: 'row', margin: 10}}>
-                <Text style={styles.header}>Auto Mode</Text>
-
-                <Switch
-                  trackColor={{false: '#767577', true: '#38a4c0'}}
-                  thumbColor={this.state.auto ? '#f5dd4b' : '#f4f3f4'}
-                  ios_backgroundColor="#3e3e3e"
-                  onValueChange={() => {
-                    this.setState({auto: !this.state.auto});
-                    this.handleAuto();
-                  }}
-                  value={this.state.auto}
-                />
-              </View>
-
-              {!this.state.auto ? (
-                <>
-                  <View style={{flex: 2, flexDirection: 'column', margin: 10}}>
-                    <Text
-                      style={
-                        styles.header
-                      }>{`Brightness: ${this.state.brightness}`}</Text>
-
-                    <Slider
-                      maximumValue={75}
-                      minimumValue={15}
-                      minimumTrackTintColor="#38a4c0"
-                      maximumTrackTintColor="#000000"
-                      step={30}
-                      value={this.state.brightness}
-                      onValueChange={(brightness) => {
-                        this.setState({brightness: brightness});
-                        this.handleBrightness(brightness);
-                      }}
-                    />
+          {this.state.readingData ? (
+            <ActivityIndicator
+              style={{marginTop: 15}}
+              size={Platform.OS === 'ios' ? 1 : 60}
+              animating={this.state.processing}
+              color="#64aabd"
+            />
+          ) : (
+            <>
+              {this.state.isVerified ? (
+                <View style={{flex: 1}}>
+                  <Text style={{fontSize: 20, marginTop: 10}}>Update Sign</Text>
+                  {priceInputs}
+                  <View style={{flex: 1, flexDirection: 'column', margin: 10}}>
+                    <TouchableOpacity
+                      style={styles.button}
+                      activeOpacity={0.5}
+                      onPress={() => {
+                        this.updatePrices();
+                      }}>
+                      <Text style={styles.buttonText}>Update Prices</Text>
+                    </TouchableOpacity>
                   </View>
+                  <View style={styles.switch}>
+                    <Text style={styles.header}>Display </Text>
+                    <View style={styles.enableInfoWrapper}>
+                      <Text
+                        style={{
+                          fontSize: 14,
+                          color: '#0C0D34',
+                          paddingRight: 10,
+                        }}>
+                        {this.state.display ? 'ON' : 'OFF'}
+                      </Text>
+                      <Switch
+                        trackColor={{false: '#767577', true: '#767577'}}
+                        thumbColor={this.state.display ? '#f5dd4b' : '#f4f3f4'}
+                        onValueChange={() => {
+                          this.handleDisplay();
+                        }}
+                        value={this.state.display}
+                      />
+                    </View>
+                  </View>
+
                   <View style={{flex: 2, flexDirection: 'row', margin: 10}}>
-                    <Text style={styles.header}>External Light </Text>
+                    <Text style={styles.header}>Auto Mode</Text>
 
                     <Switch
                       trackColor={{false: '#767577', true: '#38a4c0'}}
-                      thumbColor={this.state.extLight ? '#f5dd4b' : '#f4f3f4'}
+                      thumbColor={this.state.auto ? '#f5dd4b' : '#f4f3f4'}
                       ios_backgroundColor="#3e3e3e"
                       onValueChange={() => {
-                        this.setState({extLight: !this.state.extLight});
-                        this.handleExternalLight();
+                        this.setState({auto: !this.state.auto});
+                        this.handleAuto();
                       }}
-                      value={this.state.extLight}
+                      value={this.state.auto}
                     />
                   </View>
-                </>
-              ) : (
-                <Text> Auto Mode is on </Text>
-              )}
 
-              <View style={{flex: 1, flexDirection: 'column', margin: 10}}>
-                <TouchableOpacity
-                  style={styles.button}
-                  activeOpacity={0.5}
-                  onPress={() => {
-                    this.saveAll();
-                  }}>
-                  <Text style={styles.buttonText}>Save Changes</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.button}
-                  activeOpacity={0.5}
-                  onPress={() => {
-                    this.props.navigation.navigate('Admin', {
-                      deviceId: this.state.deviceId,
-                      config: this.state.config,
-                    });
-                  }}>
-                  <Text style={styles.buttonText}>Admin Settings</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.button}
-                  activeOpacity={0.5}
-                  onPress={() => {
-                    getConfiguration(this.state.deviceId);
-                  }}>
-                  <Text style={styles.buttonText}>Config</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          ) : (
-            <View style={{flex: 1, flexDirection: 'column', margin: 10}}>
-              <TouchableOpacity
-                style={styles.button}
-                activeOpacity={0.5}
-                onPress={() => {
-                  verifyPin(3000, this.state.deviceId);
-                }}>
-                <Text style={styles.buttonText}>Verify Pin</Text>
-              </TouchableOpacity>
-            </View>
+                  {!this.state.auto ? (
+                    <>
+                      <View
+                        style={{flex: 2, flexDirection: 'column', margin: 10}}>
+                        <Text
+                          style={
+                            styles.header
+                          }>{`Brightness: ${this.state.brightness}`}</Text>
+
+                        <Slider
+                          maximumValue={75}
+                          minimumValue={15}
+                          minimumTrackTintColor="#38a4c0"
+                          maximumTrackTintColor="#000000"
+                          step={30}
+                          value={this.state.brightness}
+                          onValueChange={(brightness) => {
+                            this.setState({brightness: brightness});
+                            this.handleBrightness(brightness);
+                          }}
+                        />
+                      </View>
+                      <View style={{flex: 2, flexDirection: 'row', margin: 10}}>
+                        <Text style={styles.header}>External Light </Text>
+
+                        <Switch
+                          trackColor={{false: '#767577', true: '#38a4c0'}}
+                          thumbColor={
+                            this.state.extLight ? '#f5dd4b' : '#f4f3f4'
+                          }
+                          ios_backgroundColor="#3e3e3e"
+                          onValueChange={() => {
+                            this.setState({extLight: !this.state.extLight});
+                            this.handleExternalLight();
+                          }}
+                          value={this.state.extLight}
+                        />
+                      </View>
+                    </>
+                  ) : (
+                    <Text> Auto Mode is on </Text>
+                  )}
+
+                  <View style={{flex: 1, flexDirection: 'column', margin: 10}}>
+                    <TouchableOpacity
+                      style={styles.button}
+                      activeOpacity={0.5}
+                      onPress={() => {
+                        this.saveAll();
+                      }}>
+                      <Text style={styles.buttonText}>Save Changes</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : (
+                <View style={{flex: 1, flexDirection: 'column', margin: 10}}>
+                  <TouchableOpacity
+                    style={styles.button}
+                    activeOpacity={0.5}
+                    onPress={() => {
+                      verifyPin(this.state.deviceId);
+                    }}>
+                    <Text style={styles.buttonText}>Verify Pin</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </>
           )}
         </ScrollView>
       </Container>

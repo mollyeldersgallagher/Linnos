@@ -37,6 +37,21 @@ const styles = StyleSheet.create({
     padding: 10,
     // placeholderTextColor: "gray",
   },
+  switch: {
+    height: 56,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomWidth: 5,
+    borderBottomColor: '#64aabd',
+    backgroundColor: '#fff',
+  },
+  enableInfoWrapper: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
 });
 
 export default styles;

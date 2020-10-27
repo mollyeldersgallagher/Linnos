@@ -6,12 +6,16 @@ import Contact from './screens/Contact';
 import BluetoothScreen from './services/Bluetooth';
 import ConnectedDevice from './services/ConnectedDevice';
 import SignController from './components/SignController';
+import PinCode from './components/PinCode';
 import Admin from './components/AdminController';
 
 import React, {useEffect} from 'react';
 import {NavigationContainer, DrawerActions} from '@react-navigation/native';
 import logo from './assets/splash_icon.png';
 import {createStackNavigator} from '@react-navigation/stack';
+import FlashMessage from 'react-native-flash-message';
+import {showMessage, hideMessage} from 'react-native-flash-message';
+
 import {
   createDrawerNavigator,
   DrawerContentScrollView,
@@ -20,6 +24,8 @@ import {
 } from '@react-navigation/drawer';
 import SplashScreen from 'react-native-splash-screen';
 import Icon from 'react-native-vector-icons/Ionicons';
+
+const correctPin = false;
 
 function CustomDrawerContent(props) {
   return (
@@ -52,74 +58,13 @@ function Header({navigation, title}) {
     </View>
   );
 }
-
-const Stack = createStackNavigator();
-function HomeStack({navigation}) {
+function PinCodeHeader({navigation, title}) {
   return (
-    <Stack.Navigator>
-      <Stack.Screen
-        name="Home"
-        component={HomeScreen}
-        options={{
-          header: () => <Header title="Home" navigation={navigation} />,
-        }}
-      />
-      <Stack.Screen
-        name="Admin"
-        component={Admin}
-        options={{
-          header: () => (
-            <Header title="Admin Controller" navigation={navigation} />
-          ),
-        }}
-      />
-      <Stack.Screen
-        name="SignController"
-        component={SignController}
-        options={{
-          header: () => (
-            <Header title="Sign Controller" navigation={navigation} />
-          ),
-        }}
-      />
-      <Stack.Screen
-        name="ConnectedDevice"
-        component={ConnectedDevice}
-        options={{
-          header: () => (
-            <Header title="Connected Device" navigation={navigation} />
-          ),
-        }}
-      />
-    </Stack.Navigator>
-  );
-}
-function BluetoothStack({navigation}) {
-  return (
-    <Stack.Navigator>
-      <Stack.Screen
-        name="Bluetooth"
-        component={BluetoothScreen}
-        options={{
-          header: () => (
-            <Header title="Bluetooth Devices" navigation={navigation} />
-          ),
-        }}
-      />
-    </Stack.Navigator>
-  );
-}
-function ContactStack({navigation}) {
-  return (
-    <Stack.Navigator>
-      <Stack.Screen
-        name="Info"
-        component={Contact}
-        options={{
-          header: () => <Header title="Contact" navigation={navigation} />,
-        }}
-      />
-    </Stack.Navigator>
+    <View style={styles.header}>
+      <View style={styles.headerTitle}>
+        <Text style={styles.headerText}>{title}</Text>
+      </View>
+    </View>
   );
 }
 
@@ -129,10 +74,75 @@ function MyDrawer({navigation}) {
   return (
     <Drawer.Navigator
       drawerContent={(props) => <CustomDrawerContent {...props} />}>
-      <Drawer.Screen name="Home" component={HomeStack} />
-      <Drawer.Screen name="Contact" component={ContactStack} />
-      <Drawer.Screen name="Bluetooth" component={BluetoothStack} />
-      <Drawer.Screen name="ConnectedDevice" component={ConnectedDevice} />
+      <Drawer.Screen
+        default
+        name="PinCode"
+        component={PinCode}
+        initialParams={{pinLength: 4, pinValue: 3683, type: 'Initial'}}
+        options={{
+          header: () => (
+            <PinCodeHeader title="Pin Code" navigation={navigation} />
+          ),
+          gestureEnabled: false,
+          swipeEnabled: false,
+          drawerLabel: () => null,
+        }}
+      />
+      <Drawer.Screen
+        name="Home"
+        component={HomeScreen}
+        options={{
+          header: () => <Header title="Home" navigation={navigation} />,
+        }}
+      />
+      <Drawer.Screen
+        name="Contact"
+        component={Contact}
+        options={{
+          header: () => <Header title="Contact" navigation={navigation} />,
+        }}
+      />
+      <Drawer.Screen
+        name="Bluetooth"
+        component={BluetoothScreen}
+        options={{
+          header: () => (
+            <Header title="Bluetooth Devices" navigation={navigation} />
+          ),
+        }}
+      />
+
+      <Drawer.Screen
+        name="Admin"
+        component={Admin}
+        options={{
+          header: () => (
+            <Header title="Admin Controller" navigation={navigation} />
+          ),
+          drawerLabel: () => null,
+        }}
+      />
+      <Drawer.Screen
+        name="SignController"
+        component={SignController}
+        options={{
+          header: () => (
+            <Header title="Sign Controller" navigation={navigation} />
+          ),
+          drawerLabel: () => null,
+        }}
+      />
+      <Drawer.Screen
+        name="ConnectedDevice"
+        component={ConnectedDevice}
+        options={{
+          header: () => (
+            <Header title="Connected Device" navigation={navigation} />
+          ),
+          drawerLabel: () => null,
+        }}
+      />
+      {/* <Drawer.Screen name="ConnectedDevice" component={ConnectedDevice} /> */}
     </Drawer.Navigator>
   );
 }
@@ -147,6 +157,7 @@ export default function App() {
       <NavigationContainer>
         <MyDrawer />
       </NavigationContainer>
+      <FlashMessage position="top" />
     </>
   );
 }
