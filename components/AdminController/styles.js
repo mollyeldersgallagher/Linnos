@@ -37,6 +37,44 @@ const styles = StyleSheet.create({
     padding: 10,
     // placeholderTextColor: "gray",
   },
+  switch: {
+    height: 56,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomWidth: 5,
+    borderBottomColor: '#64aabd',
+    backgroundColor: '#fff',
+  },
+  enableInfoWrapper: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  loading: {
+    marginTop: 50,
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  loadingHeading: {
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    fontFamily: 'Roboto-Medium',
+    fontSize: 20,
+    marginBottom: 10,
+  },
+  loadingDes: {
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    fontFamily: 'Roboto-Regular',
+  },
 });
 
 export default styles;

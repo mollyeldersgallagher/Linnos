@@ -44,7 +44,8 @@ const styles = StyleSheet.create({
     paddingRight: 5,
     paddingTop: 2,
     paddingBottom: 2,
-    fontWeight: 'bold',
+    fontFamily: 'Roboto-Medium',
+    // fontWeight: 'bold',
     fontSize: 12,
     color: '#fff',
   },
@@ -52,13 +53,6 @@ const styles = StyleSheet.create({
     height: 52,
     borderTopWidth: 1,
     borderTopColor: '#999',
-  },
-  fixedFooter: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: '#ddd',
   },
 });
 

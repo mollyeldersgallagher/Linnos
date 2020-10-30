@@ -8,6 +8,7 @@ import {
   Button,
 } from 'react-native';
 import {TouchableOpacity} from 'react-native-gesture-handler';
+import Icon from 'react-native-vector-icons/Ionicons';
 import styles from '../styles';
 
 class DeviceList extends React.Component {
@@ -33,7 +34,7 @@ class DeviceList extends React.Component {
   };
 
   render() {
-    const {devices = []} = this.props;
+    const {devices} = this.props;
     const {refreshing} = this.state;
 
     return (
@@ -43,38 +44,64 @@ class DeviceList extends React.Component {
           <RefreshControl refreshing={refreshing} onRefresh={this.onRefresh} />
         }>
         <View style={styles.listContainer}>
+          <Text
+            style={{
+              fontFamily: 'Roboto-Regular',
+              fontSize: 16,
+              marginLeft: 10,
+              marginTop: 10,
+              marginBottom: 10,
+              paddingBottom: 10,
+              borderColor: '#ccc',
+              borderBottomWidth: 0.5,
+            }}>
+            Available Bluetooth Devices
+          </Text>
+
           {devices.map((device) => (
             <TouchableHighlight
-              underlayColor="#eee"
+              underlayColor="#cee8f0"
               key={device.id}
               style={styles.listItem}
               onPress={this.onDevicePressed(device)}>
-              <View style={{flexDirection: 'column'}}>
+              <View
+                style={{
+                  flexDirection: 'column',
+                }}>
                 <View
                   style={{
-                    flexDirection: 'column',
+                    flexDirection: 'row',
                   }}>
-                  <Text style={{fontFamily: 'Roboto-Medium', fontSize: 18}}>
-                    {device.name}
-                  </Text>
+                  <Icon name="bluetooth-outline" size={28} color="#38a4c0" />
                   <Text
                     style={{
-                      fontFamily: 'NotoSansJP-Regular',
+                      fontFamily: 'Roboto-Medium',
+                      fontSize: 18,
+                      marginLeft: 10,
+                    }}>
+                    {device.name}
+                  </Text>
+
+                  <Text
+                    style={{
+                      fontFamily: 'Roboto-Regular',
                       fontSize: 14,
-                      marginTop: 0,
+                      marginTop: 4,
+                      marginLeft: 10,
                     }}>{`<${device.id}>`}</Text>
                 </View>
                 <View
                   style={{
                     flexDirection: 'row',
-                    justifyContent: 'space-around',
                   }}>
                   <TouchableOpacity></TouchableOpacity>
                   <Text
                     style={[
                       styles.listItemStatus,
                       {
-                        backgroundColor: device.paired ? 'green' : 'gray',
+                        backgroundColor: device.paired ? '#35cd63' : 'gray',
+                        marginLeft: 40,
+                        marginTop: 10,
                       },
                     ]}>
                     {device.paired ? 'PAIRED' : 'UNPAIRED'}
@@ -83,11 +110,24 @@ class DeviceList extends React.Component {
                     style={[
                       styles.listItemStatus,
                       {
-                        backgroundColor: device.connected ? 'green' : 'gray',
+                        backgroundColor: device.connected ? '#38a4c0' : 'gray',
                         marginLeft: 5,
+                        marginTop: 10,
                       },
                     ]}>
                     {device.connected ? 'CONNECTED' : 'DISCONNECTED'}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.listItemStatus,
+                      {
+                        backgroundColor:
+                          device.name === 'Serial Adapter' ? '#38a4c0' : 'gray',
+                        marginLeft: 5,
+                        marginTop: 10,
+                      },
+                    ]}>
+                    {device.name === 'Serial Adapter' ? 'LINNOS SIGN' : ''}
                   </Text>
                 </View>
               </View>

@@ -1,14 +1,12 @@
 import {
   Animated,
-  Image,
   SafeAreaView,
   Text,
   View,
-  Button,
+  Image,
   TouchableNativeFeedback,
-  Alert,
 } from 'react-native';
-import React, {useState, useEffect} from 'react';
+import React, {useState} from 'react';
 
 import {
   CodeField,
@@ -16,7 +14,7 @@ import {
   useBlurOnFulfill,
   useClearByFocusCell,
 } from 'react-native-confirmation-code-field';
-import {useNavigation} from '@react-navigation/native';
+import {showMessage, hideMessage} from 'react-native-flash-message';
 
 import styles, {
   ACTIVE_CELL_BG_COLOR,
@@ -26,18 +24,16 @@ import styles, {
   NOT_EMPTY_CELL_BG_COLOR,
 } from './styles';
 
+import logo from '../../assets/splash_icon.png';
+
 const {Value, Text: AnimatedText} = Animated;
 
 // ------ PIN CODE FUNCTIONAL COMPONENT EXPORTED ------////
 const PinCode = ({navigation, route}) => {
-  // hook setting state
-  // useEffect(() => {
-
   let CELL_COUNT = route.params.pinLength;
   let PIN = route.params.pinValue.toString();
   let TYPE = route.params.type;
-  // const PIN = 3683;
-  console.log(CELL_COUNT + '   ' + PIN);
+
   // ------ ANIMATION OF PASSCODE CELLS --------//
   const animationsColor = [...new Array(CELL_COUNT)].map(() => new Value(0));
   const animationsScale = [...new Array(CELL_COUNT)].map(() => new Value(1));
@@ -56,8 +52,7 @@ const PinCode = ({navigation, route}) => {
     ]).start();
     return PIN, CELL_COUNT;
   };
-  //
-  // }, []);
+
   const [value, setValue] = useState('');
   const ref = useBlurOnFulfill({value, cellCount: CELL_COUNT});
   const [props, getCellOnLayoutHandler] = useClearByFocusCell({
@@ -68,28 +63,29 @@ const PinCode = ({navigation, route}) => {
   const pinVerification = () => {
     console.log(typeof PIN + typeof value);
     if (PIN === value) {
-      Alert.alert(`Correct Pin`);
       if (TYPE === 'Admin') {
-        navigation.navigate('Admin', {
-          correctPin: true,
-          deviceId: route.params.deviceId,
+        navigation.navigate('HomeStack', {
+          screen: 'Admin',
+          params: {
+            deviceId: route.params.deviceId,
+          },
         });
         TYPE = 'Initial';
         PIN = '3683';
         CELL_COUNT = 4;
       } else if (TYPE === 'Initial') {
-        navigation.navigate('Home', {
-          correctPin: true,
-        });
+        navigation.navigate('Home');
         TYPE = 'Admin';
         PIN = '16888';
         CELL_COUNT = 5;
       }
     } else {
-      Alert.alert(`Incorrect Pin`);
-      navigation.navigate('PinCode', {
-        correctPin: false,
+      showMessage({
+        message: 'Incorrect Pin',
+        description: 'You have entered the wrong pin. Please try again',
+        type: 'error',
       });
+      navigation.navigate('PinCode');
     }
   };
 
@@ -137,9 +133,12 @@ const PinCode = ({navigation, route}) => {
 
   return (
     <SafeAreaView style={styles.root}>
+      <Image style={styles.logo} source={logo} />
       <Text style={styles.title}>{TYPE} Verification</Text>
 
-      <Text style={styles.subTitle}>Please enter your four digit pin </Text>
+      <Text style={styles.subTitle}>
+        Please enter your {CELL_COUNT} digit pin below{' '}
+      </Text>
 
       <CodeField
         ref={ref}
@@ -156,7 +155,7 @@ const PinCode = ({navigation, route}) => {
       <TouchableNativeFeedback
         onPress={() => {
           pinVerification();
-          // () => props.navigate("Home");
+          setValue('');
         }}>
         <View style={styles.nextButton}>
           <Text style={styles.nextButtonText}>Verify</Text>

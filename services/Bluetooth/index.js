@@ -1,28 +1,22 @@
 import React from 'react';
 import {
-  Platform,
-  ScrollView,
   Switch,
   Text,
   SafeAreaView,
   View,
   ActivityIndicator,
-  Modal,
-  Button,
   PermissionsAndroid,
 } from 'react-native';
 
-import Toast from '@remobile/react-native-toast';
 import BluetoothSerial, {
   withSubscription,
 } from 'react-native-bluetooth-serial-next';
 import {Buffer} from 'buffer';
-
-import {verifyPin, hexToAscii, asciiToHex} from './readWrite';
-
+import {asciiToHex} from './readWrite';
 import DeviceList from '../../components/DeviceList';
-import ConnectedDevice from '../ConnectedDevice';
 import styles from './styles';
+import {TouchableOpacity} from 'react-native-gesture-handler';
+import {showMessage, hideMessage} from 'react-native-flash-message';
 
 global.Buffer = Buffer;
 
@@ -38,6 +32,7 @@ class Bluetooth extends React.Component {
       devices: [],
       scanning: false,
       processing: false,
+      isRefreshing: false,
     };
   }
 
@@ -68,40 +63,55 @@ class Bluetooth extends React.Component {
         })),
       });
     } catch (e) {
-      Toast.showShortBottom(e.message);
+      showMessage({
+        message: 'Warning',
+        description: `${e.message}`,
+        type: 'warning',
+      });
     }
 
     this.events.on('bluetoothEnabled', () => {
-      Toast.showShortBottom('Bluetooth enabled');
+      showMessage({
+        message: 'Bluetooth Enabled',
+        type: 'success',
+      });
       this.setState({isEnabled: true});
     });
 
     this.events.on('bluetoothDisabled', () => {
-      Toast.showShortBottom('Bluetooth disabled');
+      showMessage({
+        message: 'Bluetooth Disabled',
+        type: 'success',
+      });
       this.setState({isEnabled: false});
     });
 
     this.events.on('connectionSuccess', ({device}) => {
       if (device) {
-        Toast.showShortBottom(
-          `Device ${device.name}<${device.id}> has been connected`,
-        );
+        showMessage({
+          message: `Device ${device.name} <${device.id}> has been connected`,
+          type: 'success',
+        });
       }
     });
 
     this.events.on('connectionFailed', ({device}) => {
       if (device) {
-        Toast.showShortBottom(
-          `Failed to connect with device ${device.name}<${device.id}>`,
-        );
+        showMessage({
+          message: 'Error',
+          description: `Bluetooth connection failed. Please try connect again`,
+          type: 'danger',
+        });
       }
     });
 
     this.events.on('connectionLost', ({device}) => {
       if (device) {
-        Toast.showShortBottom(
-          `Device ${device.name}<${device.id}> connection has been lost`,
-        );
+        showMessage({
+          message: 'Error',
+          description: `Bluetooth connection has been lost, please reconnect`,
+          type: 'danger',
+        });
       }
     });
 
@@ -114,17 +124,32 @@ class Bluetooth extends React.Component {
 
     this.events.on('error', (e) => {
       if (e) {
-        console.log(`Error: ${e.message}`);
-        Toast.showShortBottom(e.message);
+        showMessage({
+          message: `Error: ${e.message}`,
+          type: 'danger',
+        });
       }
     });
+
+    this.focusListener = this.props.navigation.addListener('focus', () => {
+      this.disconnectDevices();
+    });
+  }
+  componentWillUnmount() {
+    this.focusListener();
+  }
+  async disconnectDevices() {
+    await BluetoothSerial.disconnectAll();
   }
   requestEnable = () => async () => {
     try {
       await BluetoothSerial.requestEnable();
       this.setState({isEnabled: true});
     } catch (e) {
-      Toast.showShortBottom(e.message);
+      showMessage({
+        message: `Error: ${e.message}`,
+        type: 'danger',
+      });
     }
   };
 
@@ -132,11 +157,15 @@ class Bluetooth extends React.Component {
     try {
       if (value) {
         await BluetoothSerial.enable();
+        // this.listDevices();
       } else {
         await BluetoothSerial.disable();
       }
     } catch (e) {
-      Toast.showShortBottom(e.message);
+      showMessage({
+        message: `Error: ${e.message}`,
+        type: 'danger',
+      });
     }
   };
 
@@ -144,23 +173,20 @@ class Bluetooth extends React.Component {
     try {
       const list = await BluetoothSerial.list();
 
-      this.setState(({devices}) => ({
-        devices: devices.map((device) => {
-          const found = list.find((v) => v.id === device.id);
+      let deviceList = [];
+      let newList = list.map((device) => {
+        deviceList.push({...device, connected: false, paired: true});
+      });
 
-          if (found) {
-            return {
-              ...found,
-              paired: true,
-              connected: false,
-            };
-          }
-
-          return device;
-        }),
-      }));
+      this.setState({
+        scanning: false,
+        devices: [...deviceList],
+      });
     } catch (e) {
-      Toast.showShortBottom(e.message);
+      showMessage({
+        message: `Error: ${e.message}`,
+        type: 'danger',
+      });
     }
   };
 
@@ -169,31 +195,31 @@ class Bluetooth extends React.Component {
 
     try {
       const unpairedDevices = await BluetoothSerial.listUnpaired();
-
+      let filteredList = [];
       let newList = unpairedDevices.map((device) => {
-        const found = this.state.devices.filter((d) => d.id === device.id); // filter devices not in list yet
-        if (!found) {
-          return {
-            ...device,
-            connected: false,
-            paired: false,
-          };
-        }
-        return device;
+        var index = this.state.devices.findIndex((x) => x.id == device.id);
+        // here you can check specific property for an object whether it exist in your array or not
+        if (index === -1) {
+          filteredList.push({...device, connected: false, paired: false});
+        } else console.log('object already exists');
       });
 
       this.setState({
         scanning: false,
-        devices: [...this.state.devices, ...newList],
+        devices: [...this.state.devices, ...filteredList],
       });
     } catch (e) {
-      Toast.showShortBottom(e.message);
+      showMessage({
+        message: `Error: ${e.message}`,
+        type: 'danger',
+      });
 
       this.setState(({devices}) => ({
         scanning: false,
         devices: devices.filter((device) => device.paired || device.connected),
       }));
     }
+    console.log(this.state.devices);
   };
 
   cancelDiscovery = () => async () => {
@@ -201,7 +227,10 @@ class Bluetooth extends React.Component {
       await BluetoothSerial.cancelDiscovery();
       this.setState({scanning: false});
     } catch (e) {
-      Toast.showShortBottom(e.message);
+      showMessage({
+        message: `Error: ${e.message}`,
+        type: 'danger',
+      });
     }
   };
 
@@ -210,14 +239,20 @@ class Bluetooth extends React.Component {
       return null;
     }
     const {id, name, paired, connected} = device;
-    this.props.navigation.navigate('ConnectedDevice', {
-      processing: processing,
-      device: device,
+    this.props.navigation.navigate('HomeStack', {
+      screen: 'SelectedDevice',
+      params: {
+        processing: processing,
+        device: device,
+      },
     });
   };
 
   render() {
     const {isEnabled, device, devices, scanning, processing} = this.state;
+    if (isEnabled) {
+      this.listDevices();
+    }
     return (
       <SafeAreaView style={{flex: 1}}>
         <View style={styles.topBar}>
@@ -227,8 +262,8 @@ class Bluetooth extends React.Component {
               {isEnabled ? 'ON' : 'OFF'}
             </Text>
             <Switch
-              trackColor={{false: '#767577', true: '#767577'}}
-              thumbColor={isEnabled ? '#f5dd4b' : '#f4f3f4'}
+              trackColor={{false: '#767577', true: '#9ae6b1'}}
+              thumbColor={isEnabled ? '#35cd63' : '#f4f3f4'}
               onValueChange={this.toggleBluetooth}
               value={isEnabled}
             />
@@ -243,46 +278,76 @@ class Bluetooth extends React.Component {
                 alignItems: 'center',
                 justifyContent: 'center',
               }}>
+              <Text style={styles.loadingHeading}>Searching...</Text>
+              <Text style={styles.loadingDes}>
+                Searching for available bluetooth devices
+              </Text>
               <ActivityIndicator
                 size="large"
                 animating={scanning}
-                color="#0000ff"
-              />
-              <Button
-                textStyle={{color: '#fff'}}
-                style={styles.buttonRaised}
-                title="Cancel Discovery"
-                onPress={this.cancelDiscovery}
+                color="#38a4c0"
               />
             </View>
           )
         ) : (
-          <React.Fragment>
-            <DeviceList
-              devices={devices}
-              onDevicePressed={(device) => {
-                this.setState({device});
-                this.selectedDevice(device, processing);
-              }}
-              onRefresh={this.listDevices}
-            />
-          </React.Fragment>
+          <>
+            {isEnabled ? (
+              <React.Fragment>
+                <DeviceList
+                  devices={devices}
+                  onDevicePressed={(device) => {
+                    this.setState({device});
+                    this.selectedDevice(device, processing);
+                  }}
+                  onRefresh={this.listDevices}
+                />
+              </React.Fragment>
+            ) : (
+              <React.Fragment>
+                <View style={styles.loading}>
+                  <Text style={styles.loadingHeading}>Bluetooth is off</Text>
+                  <Text style={styles.loadingDes}>
+                    This application requires bluetooth.
+                  </Text>
+                  <ActivityIndicator
+                    style={{marginTop: 15}}
+                    size={Platform.OS === 'ios' ? 1 : 60}
+                    animating={this.state.processing}
+                    color="#64aabd"
+                  />
+                </View>
+              </React.Fragment>
+            )}
+          </>
         )}
 
         <View style={styles.footer}>
           {isEnabled && (
-            <Button
-              style={styles.footerButton}
-              title="Start Scan"
-              onPress={this.discoverUnpairedDevices}
-            />
+            <>
+              {!scanning ? (
+                <TouchableOpacity
+                  style={styles.footerButton}
+                  // title="Start Scan"
+                  onPress={this.discoverUnpairedDevices}>
+                  <Text style={styles.buttonText}>Start Scan</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={styles.footerButton}
+                  // title="Start Scan"
+                  onPress={this.cancelDiscovery}>
+                  <Text style={styles.buttonText}>Scanning...</Text>
+                </TouchableOpacity>
+              )}
+            </>
           )}
           {!isEnabled && (
-            <Button
-              title="Request Enable Bluetooth"
+            <TouchableOpacity
               style={styles.footerButton}
-              onPress={this.requestEnable}
-            />
+              // title="Start Scan"
+              onPress={this.requestEnable}>
+              <Text style={styles.buttonText}>Request Bluetooth</Text>
+            </TouchableOpacity>
           )}
         </View>
       </SafeAreaView>

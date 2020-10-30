@@ -14,34 +14,38 @@ import led from '../assets/led.jpg';
 const windowWidth = Dimensions.get('window').width;
 const windowHeight = Dimensions.get('window').height;
 
-
 function Home({navigation}) {
   return (
     <View style={styles.container}>
-       
       <View
         style={{
-         // flex: 2,
+          // flex: 2,
           flexDirection: 'column',
           justifyContent: 'center',
           // alignItems: 'center',
         }}>
-       <Image style={styles.led} source={led} /> 
+        <Image style={styles.led} source={led} />
       </View>
-
-      <View style={{flex: 2, flexDirection: 'column', margin: 10}}>
-        <Text style={styles.subtitle}> Getting Started</Text>
-        <Text style={styles.description}> Step 1: Select the Linnos signs serial adapter </Text>
-        <Text style={styles.description}> Step 2: Connect to the serial adapter</Text>
-        <Text style={styles.description}> Step 3: Change the sign using the controller </Text>
-        
-        <TouchableOpacity
-          style={styles.button}
-          activeOpacity={0.5}
-          onPress={() => navigation.navigate('Bluetooth')}>
-          <Text style={styles.buttonText}>Continue</Text>
-        </TouchableOpacity>
+      <View style={styles.headingHolder}>
+        <Text style={styles.heading}>Getting Started</Text>
       </View>
+      <View style={styles.desHolder}>
+        <Text style={styles.description}>
+          Step 1: Select the Linnos Serial Adapter
+        </Text>
+        <Text style={styles.description}>
+          Step 2: Make a Bluetooth connection
+        </Text>
+        <Text style={styles.description}>
+          Step 3: Change the sign using the controller
+        </Text>
+      </View>
+      <TouchableOpacity
+        style={styles.button}
+        activeOpacity={0.5}
+        onPress={() => navigation.navigate('Bluetooth')}>
+        <Text style={styles.buttonText}>Continue</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -61,8 +65,8 @@ const styles = StyleSheet.create({
   },
   led: {
     width: windowWidth,
-    height:windowHeight*0.4 ,
-   // alignContent: 'center',
+    height: windowHeight * 0.4,
+    // alignContent: 'center',
     borderBottomRightRadius: 60,
   },
   HeadStyle: {
@@ -70,19 +74,18 @@ const styles = StyleSheet.create({
     alignContent: 'center',
     backgroundColor: '#bdbfdd',
   },
-  subtitle:{
-    fontFamily: "Roboto-Regular",
+  subtitle: {
+    fontFamily: 'Roboto-Regular',
     fontSize: 23,
-    marginBottom:5,
-    marginTop:5,
-    color:"#0C0D34"
+    marginBottom: 5,
+    marginTop: 5,
+    color: '#0C0D34',
   },
-  description:{
-    fontFamily: "NotoSansJP-Regular",
-    fontSize: 15,
-    marginLeft:5,
-    marginRight:5,
-    color:"#0C0D34"
+  description: {
+    fontFamily: 'Roboto-Regular',
+    fontSize: 16,
+    margin: 5,
+    color: '#0C0D34',
   },
   button: {
     alignItems: 'center',
@@ -107,5 +110,36 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: 10,
     // placeholderTextColor: "gray",
+  },
+  headingHolder: {
+    height: 56,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomWidth: 5,
+    borderBottomColor: '#38a4c0',
+    backgroundColor: '#fff',
+  },
+  desHolder: {
+    // paddingHorizontal: 16,
+    flexDirection: 'column',
+    padding: 10,
+    borderBottomWidth: 5,
+    borderBottomColor: '#38a4c0',
+    backgroundColor: '#fff',
+  },
+  heading: {
+    fontSize: 18,
+    alignSelf: 'center',
+    fontFamily: 'Roboto-Regular',
+    marginBottom: 5,
+    marginTop: 5,
+    color: '#0C0D34',
+  },
+  enableInfoWrapper: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
 });

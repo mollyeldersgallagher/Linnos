@@ -4,22 +4,23 @@ import {
   TextInput,
   View,
   TouchableOpacity,
-  StatusBar,
   Switch,
-  KeyboardAvoidingView,
   ActivityIndicator,
   ScrollView,
+  Button,
 } from 'react-native';
 import {Buffer} from 'buffer';
-import BluetoothSerial from 'react-native-bluetooth-serial-next';
 global.Buffer = Buffer;
 const iconv = require('iconv-lite');
-import crc from 'crc';
 import {Container} from 'native-base';
+import {NavigationContainer, DrawerActions} from '@react-navigation/native';
 
 import Slider from '@react-native-community/slider';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import IconIon from 'react-native-vector-icons/Ionicons';
+
 import styles from './styles';
-import {StyleSheet, Platform} from 'react-native';
+import {Platform} from 'react-native';
 import {
   commandHandler,
   verifyPin,
@@ -29,7 +30,6 @@ import {
   getConfiguration,
   getLightingStatus,
   getPrices,
-  wait,
 } from '../../services/Bluetooth/readWrite';
 
 export default class SignController extends React.Component {
@@ -45,29 +45,48 @@ export default class SignController extends React.Component {
       prices: [],
       newPrices: [],
       deviceId: this.props.route.params.deviceId,
-      // events: this.props.route.params.events,
+      saving: false,
     };
   }
+
   async componentDidMount() {
     let isVerified = await verifyPin(this.state.deviceId);
     await this.setState({isVerified: isVerified});
-    await console.log(this.state.isVerified);
     this.setup();
-    this.focusListener = navigation.addListener('didFocus', () => {
-      // The screen is focused
-      // Call any action
+    this.focusListener = this.props.navigation.addListener('focus', () => {
       this.setup();
     });
-    // console.log(this.state.auto, this.state.extLight, this.state.display);
+    this.props.navigation.setOptions({
+      header: () => {
+        return (
+          <View style={styles.navHeader}>
+            {/* icon for the menu */}
+            <TouchableOpacity
+              onPress={() =>
+                this.props.navigation.dispatch(DrawerActions.toggleDrawer())
+              }>
+              <IconIon name="menu-outline" size={28} color="white" />
+            </TouchableOpacity>
+            <View>
+              <Text style={styles.headerText}>Sign Controller</Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => this.callAdminController()}
+              // style={styles.icons}
+            >
+              <Icon name="admin-panel-settings" size={30} color="white" />
+            </TouchableOpacity>
+          </View>
+        );
+      },
+    });
   }
-  // componentWillUnmount() {
-  //   // Remove the event listener
-  //   this.focusListener.remove();
-  // }
+  componentWillUnmount() {
+    this.focusListener();
+  }
 
   async setup() {
     if (this.state.isVerified) {
-      console.log('DEVICE ID' + this.state.deviceId);
       let config = await getConfiguration(this.state.deviceId);
       this.setState({
         auto: config.auto,
@@ -102,7 +121,18 @@ export default class SignController extends React.Component {
       console.log('ERROR READING DATA');
     }
   }
-
+  callAdminController = () => {
+    if (this.state.deviceId) {
+      this.props.navigation.navigate('PinCode', {
+        pinLength: 5,
+        pinValue: 16888,
+        type: 'Admin',
+        deviceId: this.state.deviceId,
+      });
+    } else {
+      console.log('error no device found');
+    }
+  };
   updatePrices() {
     let prices = [...this.state.newPrices];
 
@@ -129,7 +159,6 @@ export default class SignController extends React.Component {
   }
 
   handleDisplay() {
-    this.setState({display: !this.state.display});
     let data;
     if (this.state.display) {
       data = [0];
@@ -139,6 +168,7 @@ export default class SignController extends React.Component {
       console.log('Display: ON');
     }
     console.log(data);
+    this.setState({display: !this.state.display});
     commandHandler(10, data, this.state.deviceId);
   }
   handleExternalLight() {
@@ -150,6 +180,9 @@ export default class SignController extends React.Component {
       data = [1];
       console.log('Ext : ON');
     }
+    this.setState({
+      extLight: !this.state.extLight,
+    });
     console.log(data);
     commandHandler(21, data, this.state.deviceId);
   }
@@ -168,8 +201,14 @@ export default class SignController extends React.Component {
 
     commandHandler(11, data, this.state.deviceId);
   }
-  saveAll() {
-    saveState(this.state.deviceId);
+  async saveAll() {
+    this.setState({saving: true});
+
+    let saved = await saveState(this.state.deviceId);
+    if (saved) {
+      this.props.navigation.navigate('Bluetooth');
+    }
+    // this.setState({saving: false});
   }
   adminSettings() {
     this.props.navigation.navigate('Admin', {
@@ -185,13 +224,16 @@ export default class SignController extends React.Component {
       data = [1];
       console.log('Auto : ON');
     }
-
+    this.setState({
+      auto: !this.state.auto,
+    });
     commandHandler(12, data, this.state.deviceId);
   }
 
   render() {
     let priceInputs = [];
     console.log(this.state);
+    const {auto, display, extLight} = this.state;
 
     for (let i = 1; i <= this.state.lines; i++) {
       priceInputs.push(
@@ -218,131 +260,173 @@ export default class SignController extends React.Component {
     return (
       <Container>
         <ScrollView>
-          {this.state.readingData ? (
-            <ActivityIndicator
-              style={{marginTop: 15}}
-              size={Platform.OS === 'ios' ? 1 : 60}
-              animating={this.state.processing}
-              color="#64aabd"
-            />
+          {this.state.saving ? (
+            <View style={styles.loading}>
+              <Text style={styles.loadingHeading}>Saving Data</Text>
+              <Text style={styles.loadingDes}>
+                Please wait while we save sign updates
+              </Text>
+              <ActivityIndicator
+                style={{marginTop: 15}}
+                size={Platform.OS === 'ios' ? 1 : 60}
+                animating={this.state.processing}
+                color="#64aabd"
+              />
+            </View>
           ) : (
             <>
-              {this.state.isVerified ? (
-                <View style={{flex: 1}}>
-                  <Text style={{fontSize: 20, marginTop: 10}}>Update Sign</Text>
-                  {priceInputs}
-                  <View style={{flex: 1, flexDirection: 'column', margin: 10}}>
-                    <TouchableOpacity
-                      style={styles.button}
-                      activeOpacity={0.5}
-                      onPress={() => {
-                        this.updatePrices();
-                      }}>
-                      <Text style={styles.buttonText}>Update Prices</Text>
-                    </TouchableOpacity>
-                  </View>
-                  <View style={styles.switch}>
-                    <Text style={styles.header}>Display </Text>
-                    <View style={styles.enableInfoWrapper}>
-                      <Text
-                        style={{
-                          fontSize: 14,
-                          color: '#0C0D34',
-                          paddingRight: 10,
-                        }}>
-                        {this.state.display ? 'ON' : 'OFF'}
-                      </Text>
-                      <Switch
-                        trackColor={{false: '#767577', true: '#767577'}}
-                        thumbColor={this.state.display ? '#f5dd4b' : '#f4f3f4'}
-                        onValueChange={() => {
-                          this.handleDisplay();
-                        }}
-                        value={this.state.display}
-                      />
-                    </View>
-                  </View>
-
-                  <View style={{flex: 2, flexDirection: 'row', margin: 10}}>
-                    <Text style={styles.header}>Auto Mode</Text>
-
-                    <Switch
-                      trackColor={{false: '#767577', true: '#38a4c0'}}
-                      thumbColor={this.state.auto ? '#f5dd4b' : '#f4f3f4'}
-                      ios_backgroundColor="#3e3e3e"
-                      onValueChange={() => {
-                        this.setState({auto: !this.state.auto});
-                        this.handleAuto();
-                      }}
-                      value={this.state.auto}
-                    />
-                  </View>
-
-                  {!this.state.auto ? (
-                    <>
-                      <View
-                        style={{flex: 2, flexDirection: 'column', margin: 10}}>
-                        <Text
-                          style={
-                            styles.header
-                          }>{`Brightness: ${this.state.brightness}`}</Text>
-
-                        <Slider
-                          maximumValue={75}
-                          minimumValue={15}
-                          minimumTrackTintColor="#38a4c0"
-                          maximumTrackTintColor="#000000"
-                          step={30}
-                          value={this.state.brightness}
-                          onValueChange={(brightness) => {
-                            this.setState({brightness: brightness});
-                            this.handleBrightness(brightness);
-                          }}
-                        />
-                      </View>
-                      <View style={{flex: 2, flexDirection: 'row', margin: 10}}>
-                        <Text style={styles.header}>External Light </Text>
-
-                        <Switch
-                          trackColor={{false: '#767577', true: '#38a4c0'}}
-                          thumbColor={
-                            this.state.extLight ? '#f5dd4b' : '#f4f3f4'
-                          }
-                          ios_backgroundColor="#3e3e3e"
-                          onValueChange={() => {
-                            this.setState({extLight: !this.state.extLight});
-                            this.handleExternalLight();
-                          }}
-                          value={this.state.extLight}
-                        />
-                      </View>
-                    </>
-                  ) : (
-                    <Text> Auto Mode is on </Text>
-                  )}
-
-                  <View style={{flex: 1, flexDirection: 'column', margin: 10}}>
-                    <TouchableOpacity
-                      style={styles.button}
-                      activeOpacity={0.5}
-                      onPress={() => {
-                        this.saveAll();
-                      }}>
-                      <Text style={styles.buttonText}>Save Changes</Text>
-                    </TouchableOpacity>
-                  </View>
+              {this.state.readingData ? (
+                <View style={styles.loading}>
+                  <Text style={styles.loadingHeading}>Reading Data</Text>
+                  <Text style={styles.loadingDes}>
+                    Please wait while we communicate to the sign
+                  </Text>
+                  <ActivityIndicator
+                    style={{marginTop: 15}}
+                    size={Platform.OS === 'ios' ? 1 : 60}
+                    animating={this.state.processing}
+                    color="#64aabd"
+                  />
                 </View>
               ) : (
-                <View style={{flex: 1, flexDirection: 'column', margin: 10}}>
-                  <TouchableOpacity
-                    style={styles.button}
-                    activeOpacity={0.5}
-                    onPress={() => {
-                      verifyPin(this.state.deviceId);
-                    }}>
-                    <Text style={styles.buttonText}>Verify Pin</Text>
-                  </TouchableOpacity>
-                </View>
+                <>
+                  {this.state.isVerified ? (
+                    <View style={{flex: 1}}>
+                      {/* <Text style={{fontSize: 20, marginTop: 10}}>Update Sign</Text> */}
+                      {priceInputs}
+                      <View
+                        style={{flex: 1, flexDirection: 'column', margin: 10}}>
+                        <TouchableOpacity
+                          style={styles.button}
+                          activeOpacity={0.5}
+                          onPress={() => {
+                            this.updatePrices();
+                          }}>
+                          <Text style={styles.buttonText}>Update Prices</Text>
+                        </TouchableOpacity>
+                      </View>
+                      <View style={styles.switch}>
+                        <Text style={styles.header}>Display </Text>
+                        <View style={styles.enableInfoWrapper}>
+                          <Text
+                            style={{
+                              fontSize: 14,
+                              color: '#0C0D34',
+                              paddingRight: 10,
+                            }}>
+                            {display ? 'ON' : 'OFF'}
+                          </Text>
+                          <Switch
+                            trackColor={{false: '#767577', true: '#9ae6b1'}}
+                            thumbColor={display ? '#35cd63' : '#f4f3f4'}
+                            onValueChange={() => {
+                              this.handleDisplay();
+                            }}
+                            value={Boolean(display)}
+                          />
+                        </View>
+                      </View>
+
+                      <View style={styles.switch}>
+                        <Text style={styles.header}>Auto Mode</Text>
+
+                        <View style={styles.enableInfoWrapper}>
+                          <Text
+                            style={{
+                              fontSize: 14,
+                              color: '#0C0D34',
+                              paddingRight: 10,
+                            }}>
+                            {auto ? 'ON' : 'OFF'}
+                          </Text>
+                          <Switch
+                            trackColor={{true: '#9ae6b1', false: '#767577'}}
+                            thumbColor={auto ? '#35cd63' : '#f4f3f4'}
+                            onValueChange={() => {
+                              this.handleAuto();
+                            }}
+                            value={Boolean(auto)}
+                          />
+                        </View>
+                      </View>
+
+                      {!this.state.auto ? (
+                        <>
+                          <View
+                            style={{
+                              flex: 2,
+                              flexDirection: 'column',
+                              margin: 10,
+                            }}>
+                            <Text
+                              style={
+                                styles.header
+                              }>{`Brightness: ${this.state.brightness}`}</Text>
+
+                            <Slider
+                              maximumValue={75}
+                              minimumValue={15}
+                              minimumTrackTintColor="#38a4c0"
+                              maximumTrackTintColor="#000000"
+                              step={30}
+                              value={parseInt(this.state.brightness)}
+                              onValueChange={(brightness) => {
+                                this.setState({brightness: brightness});
+                                this.handleBrightness(brightness);
+                              }}
+                            />
+                          </View>
+                          <View style={styles.switch}>
+                            <Text style={styles.header}>External Light</Text>
+
+                            <View style={styles.enableInfoWrapper}>
+                              <Text
+                                style={{
+                                  fontSize: 14,
+                                  color: '#0C0D34',
+                                  paddingRight: 10,
+                                }}>
+                                {extLight ? 'ON' : 'OFF'}
+                              </Text>
+                              <Switch
+                                trackColor={{true: '#9ae6b1', false: '#767577'}}
+                                thumbColor={extLight ? '#35cd63' : '#f4f3f4'}
+                                onValueChange={() => {
+                                  this.handleExternalLight();
+                                }}
+                                value={Boolean(extLight)}
+                              />
+                            </View>
+                          </View>
+                        </>
+                      ) : null}
+
+                      <View
+                        style={{flex: 1, flexDirection: 'column', margin: 10}}>
+                        <TouchableOpacity
+                          style={styles.button}
+                          activeOpacity={0.5}
+                          onPress={() => {
+                            this.saveAll();
+                          }}>
+                          <Text style={styles.buttonText}>Save Changes</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ) : (
+                    <View
+                      style={{flex: 1, flexDirection: 'column', margin: 10}}>
+                      <TouchableOpacity
+                        style={styles.button}
+                        activeOpacity={0.5}
+                        onPress={() => {
+                          verifyPin(this.state.deviceId);
+                        }}>
+                        <Text style={styles.buttonText}>Verify Pin</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </>
               )}
             </>
           )}

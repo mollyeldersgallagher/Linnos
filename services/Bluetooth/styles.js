@@ -3,7 +3,7 @@ import {StyleSheet} from 'react-native';
 const styles = StyleSheet.create({
   container: {
     flex: 0.9,
-    backgroundColor: '#f5fcff',
+    backgroundColor: '#fff',
   },
   topBar: {
     height: 56,
@@ -12,7 +12,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     borderBottomWidth: 5,
-    borderBottomColor: '#64aabd',
+    borderBottomColor: '#38a4c0',
     backgroundColor: '#fff',
   },
   heading: {
@@ -53,31 +53,46 @@ const styles = StyleSheet.create({
   },
   footer: {
     height: 60,
-    // borderTopWidth: 1,
-    // borderTopColor: '#999',
-    // justifyContent: 'center',
-    // alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'stretch',
-    borderTopWidth: 1,
-    borderTopColor: '#fff',
   },
-  fixedFooter: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'stretch',
-    borderTopWidth: 1,
-    borderTopColor: '#fff',
+  buttonText: {
+    // margin: 5,
+    fontFamily: 'Roboto-Medium',
+    color: '#fff',
+    fontSize: 18,
   },
   footerButton: {
-    // alignItems: 'center',
+    height: 60,
+    alignContent: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
+
     backgroundColor: '#38a4c0',
-    fontSize: 18,
-    alignSelf: 'center',
+  },
+  loading: {
+    flex: 1,
+    // marginTop: 50,
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  loadingHeading: {
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#fff',
     fontFamily: 'Roboto-Medium',
-    padding: 10,
-    color: '#fff',
+    fontSize: 20,
+    marginBottom: 10,
+  },
+  loadingDes: {
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingLeft: 30,
+    paddingRight: 30,
+    backgroundColor: '#fff',
+    fontFamily: 'Roboto-Regular',
   },
 });
 

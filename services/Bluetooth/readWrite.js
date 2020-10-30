@@ -79,7 +79,7 @@ export const verifyPin = async (id) => {
       console.log('Packets Written ' + message),
     );
     await wait(1000);
-    response = await BluetoothSerial.readFromDevice(id);
+    let response = await BluetoothSerial.readFromDevice(id);
     await Promise.all(response).then(
       console.log('Response Recieved ' + response),
     );
@@ -175,7 +175,6 @@ export const getConfiguration = async (id) => {
 
   return config;
 };
-
 export const getLightingStatus = async (id) => {
   let lightStatus = {
     display: 1,
@@ -265,7 +264,6 @@ export const getPrices = async (id, lines, digits) => {
   }
   return priceArray;
 };
-
 export const getFirmware = async (id) => {
   let firmware;
   let firmwareStr;
@@ -302,7 +300,6 @@ export const getFirmware = async (id) => {
   }
   return firmwareStr;
 };
-
 export const commandHandler = (command, data, id) => {
   let buffer, finalBuffer, newBuffer;
   if (Buffer.isBuffer(data)) {
@@ -334,25 +331,117 @@ export const priceCommandHandler = (
   ]);
   writePackets(deviceId, finalBuffer);
 };
-
 export const saveState = async (id) => {
-  const device = await BluetoothSerial.device(id);
-  buffer = Buffer.from([0x02, 14, 0]);
-  packet = Buffer.concat([
-    buffer,
-    Buffer.from(splitCRC(crc.crc16xmodem(buffer))),
-  ]);
+  let saved = false;
+  try {
+    const device = await BluetoothSerial.device(id);
+    buffer = Buffer.from([0x02, 14, 0]);
+    packet = Buffer.concat([
+      buffer,
+      Buffer.from(splitCRC(crc.crc16xmodem(buffer))),
+    ]);
 
-  let writePromise = await device.write(packet);
+    let writePromise = await device.write(packet);
 
-  await Promise.all(writePromise).then(
-    console.log(' Save Packet Written ' + message),
-  );
-  await wait(2000);
-  const response = await BluetoothSerial.readFromDevice(id);
-  await Promise.all(response).then(
-    console.log('Save Response Recieved ' + response),
-  );
+    await Promise.all(writePromise).then(
+      console.log(' Save Packet Written ' + packet),
+    );
+    await wait(2000);
+    const response = await BluetoothSerial.readFromDevice(id);
+    await Promise.all(response).then(
+      console.log('Save Response Recieved ' + response),
+    );
+    if (response.substring(0, 2) === '20') {
+      console.log('RES OK');
+      showMessage({
+        message: 'Successful',
+        description: 'Sign updated sucessfully',
+        type: 'success',
+      });
+      saved = true;
+      // this.props.navigation.navigate('Bluetooth');
+    } else if (response === '' || response === null || response === []) {
+      console.log('RES NOT OK');
+      showMessage({
+        message: 'Response ',
+        description:
+          'It looks the sign didnt send a response. If the sign did not update please try again.',
+        type: 'warning',
+      });
+    } else {
+      saved = false;
+      showMessage({
+        message: 'Error',
+        description:
+          'An error occured please try again and check bluetooth device is connected',
+        type: 'danger',
+      });
+    }
+  } catch (e) {
+    console.log(e);
+  }
+  return saved;
+};
+export const setConfig = async (command, data, id) => {
+  let buffer, finalBuffer, newBuffer;
+
+  let set = false;
+  try {
+    if (Buffer.isBuffer(data)) {
+      buffer = Buffer.from([0x02, command, data.length]);
+      newBuffer = Buffer.concat([buffer, data]);
+      finalBuffer = Buffer.concat([
+        newBuffer,
+        Buffer.from(splitCRC(crc.crc16xmodem(newBuffer))),
+      ]);
+    } else {
+      buffer = Buffer.from([0x02, command, data.length, data]);
+      finalBuffer = Buffer.concat([
+        buffer,
+        Buffer.from(splitCRC(crc.crc16xmodem(buffer))),
+      ]);
+    }
+    const device = await BluetoothSerial.device(id);
+    let writePromise = await device.write(finalBuffer);
+
+    await Promise.all(writePromise).then(
+      console.log(' Save Packet Written ' + finalBuffer),
+    );
+    await wait(2000);
+    const response = await BluetoothSerial.readFromDevice(id);
+    await Promise.all(response).then(
+      console.log('Save Response Recieved ' + response),
+    );
+    if (response.substring(0, 2) === '20') {
+      console.log('RES OK');
+      showMessage({
+        message: 'Successful',
+        description: 'Sign updated sucessfully',
+        type: 'success',
+      });
+      set = true;
+      // this.props.navigation.navigate('Bluetooth');
+    } else if (response === '' || response === null || response === []) {
+      console.log('RES NOT OK');
+      showMessage({
+        message: 'Response ',
+        description:
+          'It looks the sign didnt send a response. If the sign did not update please try again.',
+        type: 'warning',
+      });
+    } else {
+      set = false;
+      showMessage({
+        message: 'Error',
+        description:
+          'An error occured please try again and check bluetooth device is connected',
+        type: 'danger',
+      });
+    }
+  } catch (e) {
+    console.log(e);
+  }
+  return set;
 };
 export const changeBase = (number, fromBase, toBase) => {
   if (fromBase == 10) return parseInt(number).toString(toBase);

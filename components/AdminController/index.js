@@ -6,20 +6,17 @@ import {
   TouchableOpacity,
   Switch,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import {Buffer} from 'buffer';
-import BluetoothSerial from 'react-native-bluetooth-serial-next';
 global.Buffer = Buffer;
 const iconv = require('iconv-lite');
 import {Container} from 'native-base';
 
 import styles from './styles';
 import {
-  commandHandler,
+  setConfig,
   verifyPin,
-  priceCommandHandler,
-  asciiToHex,
-  writePackets,
   getConfiguration,
   getFirmware,
 } from '../../services/Bluetooth/readWrite';
@@ -33,14 +30,25 @@ export default class AdminController extends React.Component {
       auto: true,
       serial: null,
       configured: null,
-      config: this.props.route.params.config,
+      readingData: true,
       deviceId: this.props.route.params.deviceId,
+      saving: false,
     };
   }
 
   async componentDidMount() {
     let isVerified = await verifyPin(this.state.deviceId);
     await this.setState({isVerified: isVerified});
+    this.setup();
+    this.focusListener = this.props.navigation.addListener('focus', () => {
+      this.setup();
+    });
+  }
+
+  componentWillUnmount() {
+    this.focusListener();
+  }
+  async setup() {
     if (this.state.isVerified) {
       let config = await getConfiguration(this.state.deviceId);
       this.setState({
@@ -53,18 +61,14 @@ export default class AdminController extends React.Component {
         configured: config.configured,
       });
     }
-    // await this.setState({
-    //   lines: this.state.config.lines,
-    //   digits: this.state.config.digits,
-    //   auto: this.state.config.auto,
-    //   serial: this.state.config.serial,
-    //   configured: this.state.config.configured,
-    // });
-    let firmware = await getFirmware(this.state.deviceId);
+    if (this.state.config !== []) {
+      let firmware = await getFirmware(this.state.deviceId);
 
-    await this.setState({
-      firmware: firmware,
-    });
+      await this.setState({
+        firmware: firmware,
+        readingData: false,
+      });
+    }
   }
   handleLines(lines) {
     this.setState({lines: lines});
@@ -73,7 +77,8 @@ export default class AdminController extends React.Component {
     this.setState({digits: digits});
   }
 
-  configSetup() {
+  async configSetup() {
+    this.setState({saving: true});
     this.handleAutoBrightness();
     let dataBuffer = Buffer.from([
       this.state.lines,
@@ -81,7 +86,11 @@ export default class AdminController extends React.Component {
       this.state.serial,
       this.state.autoValue,
     ]);
-    commandHandler(17, dataBuffer, this.state.deviceId);
+    let set = await setConfig(17, dataBuffer, this.state.deviceId);
+    if (set) {
+      this.props.navigation.navigate('Bluetooth');
+    }
+    this.setState({saving: false});
   }
 
   handleAutoBrightness() {
@@ -96,104 +105,153 @@ export default class AdminController extends React.Component {
     this.setState({autoValue: autoValue});
   }
 
-  saveAll() {}
-
   render() {
+    const {auto} = this.state;
+
     return (
       <Container>
         <ScrollView>
-          {this.state.isVerified ? (
-            <View style={{flex: 1}}>
-              <Text style={{fontSize: 20, marginTop: 10}}>
-                Admin Sign Settings
+          {this.state.saving ? (
+            <View style={styles.loading}>
+              <Text style={styles.loadingHeading}>Saving Data</Text>
+              <Text style={styles.loadingDes}>
+                Please wait while we save sign updates
               </Text>
-
-              <View
-                style={{
-                  flex: 2,
-                  flexDirection: 'column',
-                  margin: 10,
-                }}>
-                <Text style={styles.header}>Number of Lines</Text>
-
-                <TextInput
-                  style={styles.input}
-                  onChangeText={(text) => this.handleLines(text)}
-                  keyboardType={'numeric'}
-                  placeholder="Enter Lines"
-                  maxLength={4}
-                  value={this.state.lines}
-                />
-              </View>
-              <View style={{flex: 2, flexDirection: 'column', margin: 10}}>
-                <Text style={styles.header}>Number of digits per line</Text>
-                <TextInput
-                  style={styles.input}
-                  onChangeText={(text) => this.handleDigits(text)}
-                  keyboardType={'numeric'}
-                  maxLength={4}
-                  placeholder="Enter Digits"
-                  value={this.state.digits}
-                />
-              </View>
-              <View style={{flex: 2, flexDirection: 'column', margin: 10}}>
-                <Text style={styles.header}>Serial Protocol</Text>
-                <TextInput
-                  style={styles.input}
-                  keyboardType={'numeric'}
-                  maxLength={4}
-                  editable={false}
-                  value={this.state.serial}
-                  // placeholder="Serial Protocol"
-                />
-              </View>
-
-              <View style={{flex: 2, flexDirection: 'row', margin: 10}}>
-                <Text style={styles.header}>Auto Brightness</Text>
-
-                <Switch
-                  trackColor={{false: '#767577', true: '#38a4c0'}}
-                  thumbColor={this.state.auto ? '#f5dd4b' : '#f4f3f4'}
-                  ios_backgroundColor="#3e3e3e"
-                  onValueChange={() => {
-                    this.setState({auto: !this.state.auto});
-                    this.handleAutoBrightness();
-                  }}
-                  value={this.state.auto}
-                />
-              </View>
-              <View style={{flex: 1, flexDirection: 'column', margin: 10}}>
-                <TouchableOpacity
-                  style={styles.button}
-                  activeOpacity={0.5}
-                  onPress={() => {
-                    this.configSetup();
-                  }}>
-                  <Text style={styles.buttonText}>Set Configuration</Text>
-                </TouchableOpacity>
-              </View>
-              <View style={{flex: 2, flexDirection: 'column', margin: 10}}>
-                <Text style={styles.header}>
-                  Configured: {this.state.configured}
-                </Text>
-              </View>
-              <View style={{flex: 2, flexDirection: 'column', margin: 10}}>
-                <Text style={styles.header}>
-                  Firmware: {this.state.firmware}
-                </Text>
-              </View>
+              <ActivityIndicator
+                style={{marginTop: 15}}
+                size={Platform.OS === 'ios' ? 1 : 60}
+                animating={this.state.processing}
+                color="#64aabd"
+              />
             </View>
           ) : (
-            <View style={{flex: 1, flexDirection: 'column', margin: 10}}>
-              <TouchableOpacity
-                style={styles.button}
-                activeOpacity={0.5}
-                onPress={() => {
-                  verifyPin(this.state.deviceId);
-                }}>
-                <Text style={styles.buttonText}>Verify Pin</Text>
-              </TouchableOpacity>
-            </View>
+            <>
+              {this.state.readingData ? (
+                <View style={styles.loading}>
+                  <Text style={styles.loadingHeading}>Reading Data</Text>
+                  <Text style={styles.loadingDes}>
+                    Please wait while we communicate to the sign
+                  </Text>
+                  <ActivityIndicator
+                    style={{marginTop: 15}}
+                    size={Platform.OS === 'ios' ? 1 : 60}
+                    animating={this.state.processing}
+                    color="#64aabd"
+                  />
+                </View>
+              ) : (
+                <>
+                  {this.state.isVerified ? (
+                    <View style={{flex: 1}}>
+                      <View
+                        style={{
+                          flex: 2,
+                          flexDirection: 'column',
+                          margin: 10,
+                        }}>
+                        <Text style={styles.header}>Number of Lines</Text>
+
+                        <TextInput
+                          style={styles.input}
+                          onChangeText={(text) => this.handleLines(text)}
+                          keyboardType={'numeric'}
+                          placeholder="Enter Lines"
+                          maxLength={4}
+                          value={this.state.lines}
+                        />
+                      </View>
+                      <View
+                        style={{flex: 2, flexDirection: 'column', margin: 10}}>
+                        <Text style={styles.header}>
+                          Number of digits per line
+                        </Text>
+                        <TextInput
+                          style={styles.input}
+                          onChangeText={(text) => this.handleDigits(text)}
+                          keyboardType={'numeric'}
+                          maxLength={4}
+                          placeholder="Enter Digits"
+                          value={this.state.digits}
+                        />
+                      </View>
+                      <View
+                        style={{flex: 2, flexDirection: 'column', margin: 10}}>
+                        <Text style={styles.header}>Serial Protocol</Text>
+                        <TextInput
+                          style={styles.input}
+                          keyboardType={'numeric'}
+                          maxLength={4}
+                          editable={false}
+                          value={this.state.serial}
+                          // placeholder="Serial Protocol"
+                        />
+                      </View>
+
+                      <View style={styles.switch}>
+                        <Text style={styles.header}>Auto Brightness</Text>
+
+                        <View style={styles.enableInfoWrapper}>
+                          <Text
+                            style={{
+                              fontSize: 14,
+                              color: '#0C0D34',
+                              paddingRight: 10,
+                            }}>
+                            {auto ? 'ON' : 'OFF'}
+                          </Text>
+                          <Switch
+                            trackColor={{true: '#9ae6b1', false: '#767577'}}
+                            thumbColor={auto ? '#35cd63' : '#f4f3f4'}
+                            onValueChange={() => {
+                              this.handleAutoBrightness();
+                              this.setState({auto: !this.state.auto});
+                            }}
+                            value={Boolean(auto)}
+                          />
+                        </View>
+                      </View>
+                      <View
+                        style={{flex: 1, flexDirection: 'column', margin: 10}}>
+                        <TouchableOpacity
+                          style={styles.button}
+                          activeOpacity={0.5}
+                          onPress={() => {
+                            this.configSetup();
+                          }}>
+                          <Text style={styles.buttonText}>
+                            Set Configuration
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                      <View
+                        style={{flex: 2, flexDirection: 'column', margin: 10}}>
+                        <Text style={styles.header}>
+                          Configured: {this.state.configured}
+                        </Text>
+                      </View>
+                      <View
+                        style={{flex: 2, flexDirection: 'column', margin: 10}}>
+                        <Text style={styles.header}>
+                          Firmware: {this.state.firmware}
+                        </Text>
+                      </View>
+                    </View>
+                  ) : (
+                    <View
+                      style={{flex: 1, flexDirection: 'column', margin: 10}}>
+                      <TouchableOpacity
+                        style={styles.button}
+                        activeOpacity={0.5}
+                        onPress={() => {
+                          verifyPin(this.state.deviceId);
+                        }}>
+                        <Text style={styles.buttonText}>Verify Pin</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </>
+              )}
+            </>
           )}
         </ScrollView>
       </Container>
