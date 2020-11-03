@@ -159,6 +159,7 @@ class SelectedDevice extends React.Component {
   };
 
   toggleDeviceConnection = async ({id, connected}) => {
+    console.log(id + connected);
     if (connected) {
       await this.disconnect(id);
     } else {
@@ -167,17 +168,18 @@ class SelectedDevice extends React.Component {
   };
 
   connect = async (id) => {
-    this.setState({connecting: true, processing: true});
+    this.setState({processing: true});
 
     try {
       const connected = await BluetoothSerial.device(id).connect();
+      console.log(connected);
 
       if (connected) {
-        // showMessage({
-        //   message: 'Connected',
-        //   description: `Connection to device ${connected.name} <${connected.id}> was successful`,
-        //   type: 'success',
-        // });
+        showMessage({
+          message: 'Connected',
+          description: `Connection to device ${connected.name} <${connected.id}> was successful`,
+          type: 'success',
+        });
         this.setState(({device}) => ({
           processing: false,
           device: {
@@ -195,15 +197,15 @@ class SelectedDevice extends React.Component {
           type: 'warning',
         });
 
-        this.setState({connecting: false, processing: false});
+        this.setState({processing: false});
       }
     } catch (e) {
       showMessage({
         message: `Error ${e.message}`,
-        description: `An error has occured trying to connect to  ${connected.name} <${id}> please try again`,
+        description: `An error has occured trying to connect to  <${id}> please try again`,
         type: 'error',
       });
-      this.setState({connecting: false, processing: false});
+      this.setState({processing: false});
     }
   };
 
@@ -232,7 +234,7 @@ class SelectedDevice extends React.Component {
           deviceId: this.state.device.id,
         },
       });
-      this.setState({connecting: false, processing: false});
+      this.setState({processing: false});
     }
   };
   callSignController = (device) => {
@@ -287,7 +289,7 @@ class SelectedDevice extends React.Component {
                   <ActivityIndicator
                     style={{marginTop: 15}}
                     size={Platform.OS === 'ios' ? 1 : 60}
-                    animating={this.state.connecting}
+                    animating={this.state.processing}
                     color="#64aabd"
                   />
                 </View>
@@ -331,24 +333,21 @@ class SelectedDevice extends React.Component {
                     </TouchableOpacity>
                   </View>
 
-                  <View>
-                    {this.state.device.connected && (
-                      <React.Fragment>
-                        <View style={styles.controller}>
-                          <Text style={styles.controllerHeading}>
-                            Controllers
-                          </Text>
-                          <TouchableOpacity
-                            style={styles.buttons}
-                            onPress={() => {
-                              this.callSignController(this.state.device);
-                            }}>
-                            <Text style={styles.buttonText}>
-                              Sign Controller
-                            </Text>
-                          </TouchableOpacity>
+                  {this.state.device.connected && (
+                    <React.Fragment>
+                      <View style={styles.controller}>
+                        <Text style={styles.controllerHeading}>
+                          Controllers
+                        </Text>
+                        <TouchableOpacity
+                          style={styles.buttons}
+                          onPress={() => {
+                            this.callSignController(this.state.device);
+                          }}>
+                          <Text style={styles.buttonText}>Sign Controller</Text>
+                        </TouchableOpacity>
 
-                          {/* <TouchableOpacity
+                        {/* <TouchableOpacity
                             style={styles.buttons}
                             onPress={() => {
                               this.callAdminController(this.state.device);
@@ -357,10 +356,9 @@ class SelectedDevice extends React.Component {
                               Admin Controller
                             </Text>
                           </TouchableOpacity> */}
-                        </View>
-                      </React.Fragment>
-                    )}
-                  </View>
+                      </View>
+                    </React.Fragment>
+                  )}
                 </>
               )}
             </View>

@@ -24,6 +24,17 @@ import SplashScreen from 'react-native-splash-screen';
 import Icon from 'react-native-vector-icons/Ionicons';
 import EvilIcons from 'react-native-vector-icons/EvilIcons';
 
+import {
+  commandHandler,
+  verifyPin,
+  priceCommandHandler,
+  asciiToHex,
+  saveState,
+  getConfiguration,
+  getLightingStatus,
+  getPrices,
+} from './services/Bluetooth/readWrite';
+
 const correctPin = false;
 
 function CustomDrawerContent(props) {

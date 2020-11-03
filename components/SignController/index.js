@@ -56,6 +56,7 @@ export default class SignController extends React.Component {
     this.focusListener = this.props.navigation.addListener('focus', () => {
       this.setup();
     });
+
     this.props.navigation.setOptions({
       header: () => {
         return (
@@ -215,6 +216,9 @@ export default class SignController extends React.Component {
       deviceId: this.state.deviceId,
     });
   }
+  async changeFirmarePin() {
+    let pin = await saveState(this.state.deviceId);
+  }
   handleAuto() {
     let data;
     if (this.state.auto) {
@@ -293,6 +297,17 @@ export default class SignController extends React.Component {
                   {this.state.isVerified ? (
                     <View style={{flex: 1}}>
                       {/* <Text style={{fontSize: 20, marginTop: 10}}>Update Sign</Text> */}
+                      <View
+                        style={{flex: 1, flexDirection: 'column', margin: 10}}>
+                        <TouchableOpacity
+                          style={styles.button}
+                          activeOpacity={0.5}
+                          onPress={() => {
+                            this.changeFirmarePin(this.deviceId);
+                          }}>
+                          <Text style={styles.buttonText}>Change Pin</Text>
+                        </TouchableOpacity>
+                      </View>
                       {priceInputs}
                       <View
                         style={{flex: 1, flexDirection: 'column', margin: 10}}>

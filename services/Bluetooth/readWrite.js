@@ -69,6 +69,46 @@ export const verifyPin = async (id) => {
     buffer,
     Buffer.from(splitCRC(crc.crc16xmodem(buffer))),
   ]);
+  console.log(finalBuffer);
+  console.log('pin buffer' + finalBuffer);
+  let message = finalBuffer;
+  try {
+    const device = await BluetoothSerial.device(id);
+    let writePromise = await device.write(message);
+
+    await Promise.all(writePromise).then(
+      console.log('Packets Written ' + message),
+    );
+    await wait(1000);
+    let response = await BluetoothSerial.readFromDevice(id);
+    await Promise.all(response).then(
+      console.log('Response Recieved ' + response),
+    );
+
+    if (response.substring(0, 2) === '20') {
+      console.log('RES OK');
+    } else {
+      console.log('RES NOT OK');
+    }
+    return true;
+  } catch (e) {
+    console.log(e.message);
+    return false;
+  }
+  // return response;
+};
+export const changePin = async (id, pin) => {
+  // Buffer that holds the command to send the pin "3683" to the pole, to allow config to be modified.
+  // 0x02 - Start of text byte
+
+  let buffer = Buffer.from([0x02, 0x19, 0x04, 0x33, 0x33, 0x33, 0x33]);
+  //console.log(crc.crc16xmodem(buffer));
+  let finalBuffer = Buffer.concat([
+    buffer,
+    Buffer.from(splitCRC(crc.crc16xmodem(buffer))),
+  ]);
+  console.log(finalBuffer);
+
   console.log('pin buffer' + finalBuffer);
   let message = finalBuffer;
   try {

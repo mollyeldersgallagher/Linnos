@@ -133,6 +133,9 @@ class Bluetooth extends React.Component {
 
     this.focusListener = this.props.navigation.addListener('focus', () => {
       this.disconnectDevices();
+      if (this.state.isEnabled) {
+        this.listDevices();
+      }
     });
   }
   componentWillUnmount() {
@@ -173,14 +176,19 @@ class Bluetooth extends React.Component {
     try {
       const list = await BluetoothSerial.list();
 
-      let deviceList = [];
+      let filteredList = [];
       let newList = list.map((device) => {
-        deviceList.push({...device, connected: false, paired: true});
+        // deviceList.push({...device, connected: false, paired: true});
+        var index = this.state.devices.findIndex((x) => x.id == device.id);
+        // here you can check specific property for an object whether it exist in your array or not
+        if (index === -1) {
+          filteredList.push({...device, connected: false, paired: true});
+        } else console.log('object already exists');
       });
 
       this.setState({
-        scanning: false,
-        devices: [...deviceList],
+        // scanning: false,
+        devices: [...this.state.devices, ...filteredList],
       });
     } catch (e) {
       showMessage({
@@ -250,9 +258,7 @@ class Bluetooth extends React.Component {
 
   render() {
     const {isEnabled, device, devices, scanning, processing} = this.state;
-    if (isEnabled) {
-      this.listDevices();
-    }
+
     return (
       <SafeAreaView style={{flex: 1}}>
         <View style={styles.topBar}>
@@ -269,29 +275,41 @@ class Bluetooth extends React.Component {
             />
           </View>
         </View>
-
-        {scanning ? (
-          isEnabled && (
-            <View
-              style={{
-                flex: 1,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}>
-              <Text style={styles.loadingHeading}>Searching...</Text>
+        {!isEnabled ? (
+          <React.Fragment>
+            <View style={styles.loading}>
+              <Text style={styles.loadingHeading}>Bluetooth is off</Text>
               <Text style={styles.loadingDes}>
-                Searching for available bluetooth devices
+                This application requires bluetooth.
               </Text>
               <ActivityIndicator
-                size="large"
-                animating={scanning}
-                color="#38a4c0"
+                style={{marginTop: 15}}
+                size={Platform.OS === 'ios' ? 1 : 60}
+                animating={this.state.processing}
+                color="#64aabd"
               />
             </View>
-          )
+          </React.Fragment>
         ) : (
           <>
-            {isEnabled ? (
+            {scanning ? (
+              <View
+                style={{
+                  flex: 1,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                <Text style={styles.loadingHeading}>Searching...</Text>
+                <Text style={styles.loadingDes}>
+                  Searching for available bluetooth devices
+                </Text>
+                <ActivityIndicator
+                  size="large"
+                  animating={scanning}
+                  color="#38a4c0"
+                />
+              </View>
+            ) : (
               <React.Fragment>
                 <DeviceList
                   devices={devices}
@@ -301,21 +319,6 @@ class Bluetooth extends React.Component {
                   }}
                   onRefresh={this.listDevices}
                 />
-              </React.Fragment>
-            ) : (
-              <React.Fragment>
-                <View style={styles.loading}>
-                  <Text style={styles.loadingHeading}>Bluetooth is off</Text>
-                  <Text style={styles.loadingDes}>
-                    This application requires bluetooth.
-                  </Text>
-                  <ActivityIndicator
-                    style={{marginTop: 15}}
-                    size={Platform.OS === 'ios' ? 1 : 60}
-                    animating={this.state.processing}
-                    color="#64aabd"
-                  />
-                </View>
               </React.Fragment>
             )}
           </>
