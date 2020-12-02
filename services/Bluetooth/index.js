@@ -144,6 +144,9 @@ class Bluetooth extends React.Component {
   async disconnectDevices() {
     await BluetoothSerial.disconnectAll();
   }
+  timeout(ms) {
+    return new Promise((reject) => setTimeout(reject, ms));
+  }
   requestEnable = () => async () => {
     try {
       await BluetoothSerial.requestEnable();
@@ -230,10 +233,17 @@ class Bluetooth extends React.Component {
     console.log(this.state.devices);
   };
 
-  cancelDiscovery = () => async () => {
+  cancelDiscovery = async () => {
     try {
-      await BluetoothSerial.cancelDiscovery();
-      this.setState({scanning: false});
+      const cancel = await BluetoothSerial.cancelDiscovery();
+      const stopScanningRequest = await BluetoothSerial.stopScanning();
+      console.log(cancel, stopScanningRequest);
+      if (cancel) {
+        this.setState({scanning: false});
+      } else if (stopScanningRequest) {
+        this.setState({scanning: false});
+      }
+      //this.setState({scanning: false});
     } catch (e) {
       showMessage({
         message: `Error: ${e.message}`,
@@ -247,6 +257,7 @@ class Bluetooth extends React.Component {
       return null;
     }
     const {id, name, paired, connected} = device;
+    console.log(device);
     this.props.navigation.navigate('HomeStack', {
       screen: 'SelectedDevice',
       params: {
@@ -260,7 +271,7 @@ class Bluetooth extends React.Component {
     const {isEnabled, device, devices, scanning, processing} = this.state;
 
     return (
-      <SafeAreaView style={{flex: 1}}>
+      <SafeAreaView style={{flex: 1, backgroundColor: '#fff'}}>
         <View style={styles.topBar}>
           <Text style={styles.heading}>Bluetooth</Text>
           <View style={styles.enableInfoWrapper}>
@@ -339,7 +350,7 @@ class Bluetooth extends React.Component {
                   style={styles.footerButton}
                   // title="Start Scan"
                   onPress={this.cancelDiscovery}>
-                  <Text style={styles.buttonText}>Scanning...</Text>
+                  <Text style={styles.buttonText}>Cancel Scan</Text>
                 </TouchableOpacity>
               )}
             </>

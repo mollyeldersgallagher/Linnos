@@ -4,6 +4,9 @@ global.Buffer = Buffer;
 const iconv = require('iconv-lite');
 import crc from 'crc';
 import {showMessage, hideMessage} from 'react-native-flash-message';
+function timeout(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 export const wait = async (ms) => {
   return new Promise((resolve) => {

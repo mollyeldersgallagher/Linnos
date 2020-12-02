@@ -171,7 +171,7 @@ function MyDrawer({navigation}) {
   return (
     <Drawer.Navigator
       drawerContent={(props) => <CustomDrawerContent {...props} />}>
-      <Drawer.Screen
+      {/* <Drawer.Screen
         name="PinCode"
         component={PinCode}
         initialParams={{pinLength: 4, pinValue: 3683, type: 'Initial'}}
@@ -181,7 +181,7 @@ function MyDrawer({navigation}) {
           drawerLabel: () => <Text>Lock</Text>,
           icon: () => <EvilIcons name="lock" color="#000" size={36} />,
         }}
-      />
+      /> */}
       <Drawer.Screen name="Home" component={HomeScreenStack} />
       <Drawer.Screen name="Bluetooth" component={BluetoothStack} />
       <Drawer.Screen name="Contact" component={ContactStack} />

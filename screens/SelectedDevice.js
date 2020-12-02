@@ -27,8 +27,8 @@ class SelectedDevice extends React.Component {
     this.params = this.props.route.params;
 
     this.state = {
-      processing: this.params.processing,
-      device: this.params.device,
+      processing: this.props.route.params.processing,
+      device: this.props.route.params.device,
       connecting: false,
       pairing: false,
     };
@@ -51,6 +51,12 @@ class SelectedDevice extends React.Component {
       this.toggleDevicePairing(this.state.device);
     }
     this.focusListener = this.props.navigation.addListener('focus', () => {
+      this.setState({
+        processing: this.props.route.params.processing,
+        device: this.props.route.params.device,
+        connecting: false,
+        pairing: false,
+      });
       this.isConnected();
     });
   }
