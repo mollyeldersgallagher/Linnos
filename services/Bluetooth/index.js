@@ -132,6 +132,15 @@ class Bluetooth extends React.Component {
     });
 
     this.focusListener = this.props.navigation.addListener('focus', () => {
+      PermissionsAndroid.check(
+        PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION,
+      ).then((result) => {
+        if (!result) {
+          PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION,
+          );
+        }
+      });
       this.disconnectDevices();
       if (this.state.isEnabled) {
         this.listDevices();
@@ -202,10 +211,22 @@ class Bluetooth extends React.Component {
   };
 
   discoverUnpairedDevices = async () => {
+    console.log('PERMISSIONS CHECK');
+    PermissionsAndroid.check(
+      PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION,
+    ).then((result) => {
+      if (!result) {
+        PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION,
+        );
+      }
+    });
+    console.log('Action: Starting Scan ');
     this.setState({scanning: true});
 
     try {
       const unpairedDevices = await BluetoothSerial.listUnpaired();
+      console.log(unpairedDevices);
       let filteredList = [];
       let newList = unpairedDevices.map((device) => {
         var index = this.state.devices.findIndex((x) => x.id == device.id);

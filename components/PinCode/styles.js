@@ -65,6 +65,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingBottom: 40,
   },
+  errMessage: {
+    paddingTop: 20,
+    color: 'red',
+    fontWeight: '700',
+    textAlign: 'center',
+    paddingBottom: 40,
+  },
   icon: {
     width: 217 / 2.4,
     height: 158 / 2.4,

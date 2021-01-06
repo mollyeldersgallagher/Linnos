@@ -16,6 +16,8 @@ import {showMessage, hideMessage} from 'react-native-flash-message';
 import BluetoothSerial from 'react-native-bluetooth-serial-next';
 import {Buffer} from 'buffer';
 
+import {pinCommandHandler} from '../services/Bluetooth/readWrite';
+
 global.Buffer = Buffer;
 
 const iconv = require('iconv-lite');
@@ -195,7 +197,8 @@ class SelectedDevice extends React.Component {
           },
         }));
 
-        this.callSignController(this.state.device);
+        // this.callSignController(this.state.device);
+        this.callPinPad(this.state.device);
       } else {
         showMessage({
           message: 'Connection Failed ',
@@ -255,11 +258,37 @@ class SelectedDevice extends React.Component {
       console.log('error no device found');
     }
   };
+
+  callPinPad = async () => {
+    if (this.state.device) {
+      // command and request handler, returns result
+      let result = await pinCommandHandler(this.state.device.id, null, true);
+      console.log(result);
+      if (result === 'NOT OK ERR') {
+      }
+
+      console.log(result.res + ' ' + result.pinSet);
+      await this.props.navigation.navigate('PinCode', {
+        pinLength: 4,
+        type: 'Pin',
+        deviceId: this.state.device.id,
+        pinResult: result,
+      });
+
+      // this.props.navigation.navigate('PinCode', {
+      //   pinLength: 4,
+      //   type: 'Pin',
+      //   deviceId: this.state.device.id,
+      //   pinResult: result,
+      // });
+    } else {
+      console.log('error no device found');
+    }
+  };
   callAdminController = (device) => {
     if (device) {
       this.props.navigation.navigate('PinCode', {
         pinLength: 5,
-        pinValue: 16888,
         type: 'Admin',
         deviceId: this.state.device.id,
       });
@@ -339,7 +368,7 @@ class SelectedDevice extends React.Component {
                     </TouchableOpacity>
                   </View>
 
-                  {this.state.device.connected && (
+                  {this.state.device.pinResponce && (
                     <React.Fragment>
                       <View style={styles.controller}>
                         <Text style={styles.controllerHeading}>

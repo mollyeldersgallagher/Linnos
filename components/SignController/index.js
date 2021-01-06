@@ -50,8 +50,8 @@ export default class SignController extends React.Component {
   }
 
   async componentDidMount() {
-    let isVerified = await verifyPin(this.state.deviceId);
-    await this.setState({isVerified: isVerified});
+    // let isVerified = await verifyPin(this.state.deviceId);
+    await this.setState({isVerified: true});
     this.setup();
     this.focusListener = this.props.navigation.addListener('focus', () => {
       this.setup();
@@ -96,17 +96,26 @@ export default class SignController extends React.Component {
         digits: parseInt(config.digits),
         config: config,
       });
+    } else {
+      console.log('ERROR READING DATA');
+      this.setState({
+        readingData: false,
+      });
     }
-    if (this.state.config !== []) {
+    if (this.state.config !== {}) {
       let signPrices = await getPrices(
         this.state.deviceId,
         this.state.lines,
         this.state.digits,
       );
-
       this.setState({
         prices: signPrices,
         newPrices: signPrices,
+      });
+    } else {
+      console.log('ERROR READING DATA');
+      this.setState({
+        readingData: false,
       });
     }
     if (this.state.prices !== []) {
@@ -134,6 +143,7 @@ export default class SignController extends React.Component {
       console.log('error no device found');
     }
   };
+
   updatePrices() {
     let prices = [...this.state.newPrices];
 

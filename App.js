@@ -5,6 +5,7 @@ import HomeScreen from './screens/Home';
 import Contact from './screens/Contact';
 import BluetoothScreen from './services/Bluetooth';
 import SelectedDevice from './screens/SelectedDevice';
+import ConnectedDevice from './screens/ConnectedDevice';
 import SignController from './components/SignController';
 import PinCode from './components/PinCode';
 import Admin from './components/AdminController';
@@ -119,6 +120,26 @@ function HomeStack({navigation}) {
           ),
         }}
       />
+      <Stack.Screen
+        name="ConnectedDevice"
+        component={ConnectedDevice}
+        options={{
+          // header: '',
+          // headerRight: '',
+          header: () => (
+            <Header title="Connected Device" navigation={navigation} />
+          ),
+        }}
+      />
+      <Stack.Screen
+        name="PinCode"
+        component={PinCode}
+        options={{
+          // header: '',
+          // headerRight: '',
+          header: () => <Header title="Verify Pin" navigation={navigation} />,
+        }}
+      />
     </Stack.Navigator>
   );
 }
@@ -174,7 +195,7 @@ function MyDrawer({navigation}) {
       {/* <Drawer.Screen
         name="PinCode"
         component={PinCode}
-        initialParams={{pinLength: 4, pinValue: 3683, type: 'Initial'}}
+        //  initialParams={{pinLength: 4, pinValue: 3683, type: 'Initial'}}
         options={{
           gestureEnabled: false,
           swipeEnabled: false,

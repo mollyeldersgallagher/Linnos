@@ -62,15 +62,24 @@ writePackets = async (id, message, packetSize = 64) => {
  * component did mount after connecting to blue tooth
  * @param timeout timeout in milliseconds and deviceId
  */
-export const verifyPin = async (id) => {
+export const pinCommandHandler = async (id, pinBuffer, pinSet) => {
   // Buffer that holds the command to send the pin "3683" to the pole, to allow config to be modified.
   // 0x02 - Start of text byte
-  let pin = 3683;
-  let buffer = Buffer.from([0x02, 0x14, 0x04, 0x33, 0x36, 0x38, 0x33]);
-  //console.log(crc.crc16xmodem(buffer));
+  let buffer;
+  // check if the pin is entered, if not default to 3683
+  if (pinBuffer === null || pinBuffer === undefined) {
+    pinBuffer = Buffer.from([0x33, 0x36, 0x38, 0x33]);
+  }
+  // if the pin is set verify pin with command 20 or if pin is not set, set it with command 19
+  if (pinSet) {
+    buffer = Buffer.from([0x02, 0x20, 0x04]);
+  } else {
+    buffer = Buffer.from([0x02, 0x19, 0x04]);
+  }
+  let newBuffer = Buffer.concat([buffer, pinBuffer]);
   let finalBuffer = Buffer.concat([
-    buffer,
-    Buffer.from(splitCRC(crc.crc16xmodem(buffer))),
+    newBuffer,
+    Buffer.from(splitCRC(crc.crc16xmodem(newBuffer))),
   ]);
   console.log(finalBuffer);
   console.log('pin buffer' + finalBuffer);
@@ -88,57 +97,139 @@ export const verifyPin = async (id) => {
       console.log('Response Recieved ' + response),
     );
 
-    if (response.substring(0, 2) === '20') {
-      console.log('RES OK');
+    let resResult = {};
+    console.log(typeof response);
+
+    if (response.substring(0, 3) === '201' && response.charAt(3) === 'F') {
+      console.log('RES OK AND PIN NOT SET');
+      resResult = {res: 'OK', pinSet: false};
+    } else if (
+      response.substring(0, 3) === '201' &&
+      response.substring(3, 5) === '1E'
+    ) {
+      console.log('RES OK AND PIN IS SET');
+      resResult = {res: 'OK', pinSet: true};
+    } else if (
+      response.charAt(3) === 'F' &&
+      response.substring(0, 3) !== '201'
+    ) {
+      console.log('RES NOT OK AND PIN IS NOT SET');
+      resResult = {res: 'NOT OK', pinSet: false};
+    } else if (
+      response.substring(3, 5) === '1E' &&
+      response.substring(0, 3) !== '201'
+    ) {
+      console.log('RES NOT OK AND PIN IS SET');
+      resResult = {res: 'NOT OK', pinSet: true};
     } else {
-      console.log('RES NOT OK');
+      resResult = {res: 'NOT OK ERR', pinSet: null};
     }
-    return true;
+    return resResult;
   } catch (e) {
     console.log(e.message);
     return false;
   }
-  // return response;
 };
-export const changePin = async (id, pin) => {
-  // Buffer that holds the command to send the pin "3683" to the pole, to allow config to be modified.
-  // 0x02 - Start of text byte
 
-  let buffer = Buffer.from([0x02, 0x19, 0x04, 0x33, 0x33, 0x33, 0x33]);
-  //console.log(crc.crc16xmodem(buffer));
-  let finalBuffer = Buffer.concat([
-    buffer,
-    Buffer.from(splitCRC(crc.crc16xmodem(buffer))),
-  ]);
-  console.log(finalBuffer);
+// export const verifyPin = async (id, pinBuffer, pinSet) => {
+//   // Buffer that holds the command to send the pin "3683" to the pole, to allow config to be modified.
+//   // 0x02 - Start of text byte
+//   let buffer = Buffer.from([0x02, 0x14, 0x04, 0x33, 0x36, 0x38, 0x33]);
+//   //console.log(crc.crc16xmodem(buffer));
+//   let finalBuffer = Buffer.concat([
+//     buffer,
+//     Buffer.from(splitCRC(crc.crc16xmodem(buffer))),
+//   ]);
+//   console.log(finalBuffer);
+//   console.log('pin buffer' + finalBuffer);
+//   let message = finalBuffer;
+//   try {
+//     const device = await BluetoothSerial.device(id);
+//     let writePromise = await device.write(message);
 
-  console.log('pin buffer' + finalBuffer);
-  let message = finalBuffer;
-  try {
-    const device = await BluetoothSerial.device(id);
-    let writePromise = await device.write(message);
+//     await Promise.all(writePromise).then(
+//       console.log('Packets Written ' + message),
+//     );
+//     await wait(1000);
+//     let response = await BluetoothSerial.readFromDevice(id);
+//     await Promise.all(response).then(
+//       console.log('Response Recieved ' + response),
+//     );
 
-    await Promise.all(writePromise).then(
-      console.log('Packets Written ' + message),
-    );
-    await wait(1000);
-    let response = await BluetoothSerial.readFromDevice(id);
-    await Promise.all(response).then(
-      console.log('Response Recieved ' + response),
-    );
+//     let resResult = {};
+//     console.log(typeof response);
 
-    if (response.substring(0, 2) === '20') {
-      console.log('RES OK');
-    } else {
-      console.log('RES NOT OK');
-    }
-    return true;
-  } catch (e) {
-    console.log(e.message);
-    return false;
-  }
-  // return response;
-};
+//     if (response.substring(0, 3) === '201' && response.charAt(3) === 'F') {
+//       console.log('RES OK AND PIN NOT SET');
+//       resResult = {res: 'OK', pinSet: false};
+//     } else if (
+//       response.substring(0, 3) === '201' &&
+//       response.substring(3, 5) === '1E'
+//     ) {
+//       console.log('RES OK AND PIN IS SET');
+//       resResult = {res: 'OK', pinSet: true};
+//     } else if (
+//       response.charAt(3) === 'F' &&
+//       response.substring(0, 3) !== '201'
+//     ) {
+//       console.log('RES NOT OK AND PIN IS NOT SET');
+//       resResult = {res: 'NOT OK', pinSet: false};
+//     } else if (
+//       response.substring(3, 5) === '1E' &&
+//       response.substring(0, 3) !== '201'
+//     ) {
+//       console.log('RES NOT OK AND PIN IS SET');
+//       resResult = {res: 'NOT OK', pinSet: true};
+//     } else {
+//       resResult = {res: 'NOT OK ERR', pinSet: null};
+//     }
+//     return resResult;
+//   } catch (e) {
+//     console.log(e.message);
+//     return false;
+//   }
+// };
+// export const setPin = async (id, pinBuffer) => {
+//   // Buffer that holds the command to send the pin "3683" to the pole, to allow config to be modified.
+//   // 0x02 - Start of text byte
+
+//   let buffer = Buffer.from([0x02, 0x19, 0x04]);
+//   //console.log(crc.crc16xmodem(buffer));
+//   let newBuffer = Buffer.concat([buffer, pinBuffer]);
+//   let finalBuffer = Buffer.concat([
+//     newBuffer,
+//     Buffer.from(splitCRC(crc.crc16xmodem(newBuffer))),
+//   ]);
+//   console.log(finalBuffer);
+
+//   console.log('pin buffer' + finalBuffer);
+//   let message = finalBuffer;
+//   try {
+//     const device = await BluetoothSerial.device(id);
+//     let writePromise = await device.write(message);
+
+//     await Promise.all(writePromise).then(
+//       console.log('Packets Written ' + message),
+//     );
+//     await wait(1000);
+//     let response = await BluetoothSerial.readFromDevice(id);
+//     await Promise.all(response).then(
+//       console.log('Response Recieved ' + response),
+//     );
+
+//     if (response.substring(0, 2) === '20') {
+//       console.log('RES OK');
+//     } else {
+//       console.log('RES NOT OK');
+//     }
+//     return true;
+//   } catch (e) {
+//     console.log(e.message);
+//     return false;
+//   }
+//   // return response;
+// };
+
 export const getConfiguration = async (id) => {
   let config = {};
   let result = {
