@@ -39,12 +39,18 @@ class Bluetooth extends React.Component {
   async componentDidMount() {
     this.events = this.props.events;
 
-    PermissionsAndroid.check(
-      PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION,
+    await PermissionsAndroid.check(
+      PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+      // PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
     ).then((result) => {
       if (!result) {
         PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION,
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+          {
+            title: 'Bluetooth Access Required',
+            message:
+              'Linnos needs Bluetooth Access in order to connect to your device.',
+          },
         );
       }
     });
@@ -67,6 +73,7 @@ class Bluetooth extends React.Component {
         message: 'Warning',
         description: `${e.message}`,
         type: 'warning',
+        duration: 3000,
       });
     }
 
@@ -91,6 +98,7 @@ class Bluetooth extends React.Component {
         showMessage({
           message: `Device ${device.name} <${device.id}> has been connected`,
           type: 'success',
+          duration: 3000,
         });
       }
     });
@@ -101,6 +109,7 @@ class Bluetooth extends React.Component {
           message: 'Error',
           description: `Bluetooth connection failed. Please try connect again`,
           type: 'danger',
+          duration: 3000,
         });
       }
     });
@@ -111,6 +120,7 @@ class Bluetooth extends React.Component {
           message: 'Error',
           description: `Bluetooth connection has been lost, please reconnect`,
           type: 'danger',
+          duration: 3000,
         });
       }
     });
@@ -132,26 +142,33 @@ class Bluetooth extends React.Component {
     });
 
     this.focusListener = this.props.navigation.addListener('focus', () => {
-      PermissionsAndroid.check(
-        PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION,
-      ).then((result) => {
-        if (!result) {
-          PermissionsAndroid.request(
-            PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION,
-          );
-        }
-      });
       this.disconnectDevices();
       if (this.state.isEnabled) {
         this.listDevices();
       }
+
+      PermissionsAndroid.check(
+        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+      ).then((result) => {
+        if (!result) {
+          PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+          );
+        }
+      });
+      console.log('bluetooth listener');
     });
+    this.disconnectDevices();
+    if (this.state.isEnabled) {
+      this.listDevices();
+    }
   }
   componentWillUnmount() {
     this.focusListener();
   }
   async disconnectDevices() {
     await BluetoothSerial.disconnectAll();
+    console.log('disconnect');
   }
   timeout(ms) {
     return new Promise((reject) => setTimeout(reject, ms));
@@ -164,6 +181,7 @@ class Bluetooth extends React.Component {
       showMessage({
         message: `Error: ${e.message}`,
         type: 'danger',
+        duration: 3000,
       });
     }
   };
@@ -180,6 +198,7 @@ class Bluetooth extends React.Component {
       showMessage({
         message: `Error: ${e.message}`,
         type: 'danger',
+        duration: 3000,
       });
     }
   };
@@ -206,29 +225,61 @@ class Bluetooth extends React.Component {
       showMessage({
         message: `Error: ${e.message}`,
         type: 'danger',
+        duration: 3000,
+      });
+    }
+  };
+  refreshList = async () => {
+    try {
+      const list = await BluetoothSerial.list();
+
+      let filteredList = [];
+      let newList = await list.map((device) => {
+        // deviceList.push({...device, connected: false, paired: true});
+        var index = this.state.devices.findIndex((x) => x.id == device.id);
+        // here you can check specific property for an object whether it exist in your array or not
+        if (index === -1) {
+          filteredList.push({...device, connected: false, paired: true});
+        } else console.log('object already exists');
+      });
+
+      await this.setState({
+        // scanning: false,
+        devices: [...filteredList],
+      });
+    } catch (e) {
+      showMessage({
+        message: `Error: ${e.message}`,
+        type: 'danger',
+        duration: 3000,
       });
     }
   };
 
   discoverUnpairedDevices = async () => {
+    this.setState({scanning: true});
     console.log('PERMISSIONS CHECK');
-    PermissionsAndroid.check(
-      PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION,
+    await PermissionsAndroid.check(
+      PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+      // PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
     ).then((result) => {
       if (!result) {
         PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION,
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+          {
+            title: 'Bluetooth Access Required',
+            message:
+              'Linnos needs Bluetooth Access in order to connect to your device.',
+          },
         );
       }
     });
-    console.log('Action: Starting Scan ');
-    this.setState({scanning: true});
-
     try {
+      console.log('SCANNING');
       const unpairedDevices = await BluetoothSerial.listUnpaired();
       console.log(unpairedDevices);
       let filteredList = [];
-      let newList = unpairedDevices.map((device) => {
+      let newList = await unpairedDevices.map((device) => {
         var index = this.state.devices.findIndex((x) => x.id == device.id);
         // here you can check specific property for an object whether it exist in your array or not
         if (index === -1) {
@@ -244,6 +295,7 @@ class Bluetooth extends React.Component {
       showMessage({
         message: `Error: ${e.message}`,
         type: 'danger',
+        duration: 3000,
       });
 
       this.setState(({devices}) => ({
@@ -269,6 +321,7 @@ class Bluetooth extends React.Component {
       showMessage({
         message: `Error: ${e.message}`,
         type: 'danger',
+        duration: 3000,
       });
     }
   };
@@ -349,7 +402,7 @@ class Bluetooth extends React.Component {
                     this.setState({device});
                     this.selectedDevice(device, processing);
                   }}
-                  onRefresh={this.listDevices}
+                  onRefresh={this.refreshList}
                 />
               </React.Fragment>
             )}

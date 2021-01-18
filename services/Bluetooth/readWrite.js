@@ -91,7 +91,7 @@ export const pinCommandHandler = async (id, pinBuffer, pinSet) => {
     await Promise.all(writePromise).then(
       console.log('Packets Written ' + message),
     );
-    await wait(2000);
+    await wait(4000);
     let response = await BluetoothSerial.readFromDevice(id);
     await Promise.all(response).then(
       console.log('Response Recieved ' + response),

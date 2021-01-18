@@ -5,7 +5,9 @@ import {
   View,
   Image,
   TouchableNativeFeedback,
+  ActivityIndicator,
 } from 'react-native';
+
 import React, {useState, useEffect} from 'react';
 
 import {
@@ -42,8 +44,6 @@ const PinCode = ({navigation, route}) => {
   let deviceId = route.params.deviceId;
   let pinResult = route.params.pinResult;
   let TYPE = route.params.type;
-  let settingPin = false;
-  let verifyingPin = false;
 
   // ------ ANIMATION OF PASSCODE CELLS --------//
   const animationsColor = [...new Array(CELL_COUNT)].map(() => new Value(0));
@@ -69,6 +69,7 @@ const PinCode = ({navigation, route}) => {
   const [checkPin, setCheckPin] = useState('');
   const [pinSet, setPinSet] = useState('');
   const [pinRes, setPinRes] = useState('');
+  const [processing, setProcessing] = useState(false);
 
   // animation on pin cells
   const ref = useBlurOnFulfill({value, cellCount: CELL_COUNT});
@@ -105,6 +106,7 @@ const PinCode = ({navigation, route}) => {
           message: 'Incorrect Pin',
           description: 'You have entered the wrong pin. Please try again',
           type: 'error',
+          duration: 3000,
         });
       }
     } else if (TYPE === 'Pin') {
@@ -124,11 +126,15 @@ const PinCode = ({navigation, route}) => {
         console.log(
           'PIN BUFFER ' + pinBuffer + 'PIN SET ' + pinSet + 'HEX DIGITS ',
         );
+        setProcessing(true);
         let response = await pinCommandHandler(deviceId, pinBuffer, pinSet);
         console.log(response);
-        setCheckPin(response.res);
-        console.log('PIN RES ' + response.res);
+        //await setCheckPin(response.res);
+        console.log('PIN RES ' + response.res + 'PIN CHECK' + checkPin);
         if (response.res === 'OK') {
+          // if (response.res === 'OK') {
+          setProcessing(false);
+
           navigation.navigate('HomeStack', {
             screen: 'SignController',
             params: {
@@ -136,10 +142,13 @@ const PinCode = ({navigation, route}) => {
             },
           });
         } else {
+          setProcessing(false);
+
           showMessage({
             message: 'Incorrect Pin',
             description: 'You have entered the wrong pin. Please try again',
             type: 'error',
+            duration: 3000,
           });
           navigation.navigate('PinCode');
         }
@@ -193,58 +202,76 @@ const PinCode = ({navigation, route}) => {
   return (
     <SafeAreaView style={styles.root}>
       <Image style={styles.logo} source={logo} />
-      {TYPE === 'Pin' ? (
-        pinSet ? (
-          <Text style={styles.title}> {TYPE} Verification</Text>
-        ) : (
-          <Text style={styles.title}> Set {TYPE}</Text>
-        )
+      {processing ? (
+        <View style={styles.loading}>
+          <Text style={styles.loadingHeading}>Verify Pin</Text>
+          <Text style={styles.loadingDes}>
+            Please wait while we verify your pin with the sign
+          </Text>
+          <ActivityIndicator
+            style={{marginTop: 15}}
+            size={Platform.OS === 'ios' ? 1 : 60}
+            animating={processing}
+            color="#64aabd"
+          />
+        </View>
       ) : (
-        <Text style={styles.title}>{TYPE} Verification</Text>
-      )}
-
-      <Text style={styles.subTitle}>
-        Please enter your {CELL_COUNT} digit pin below{' '}
-      </Text>
-
-      <CodeField
-        ref={ref}
-        {...props}
-        value={value}
-        onChangeText={setValue}
-        cellCount={CELL_COUNT}
-        rootStyle={styles.codeFiledRoot}
-        keyboardType="number-pad"
-        textContentType="oneTimeCode"
-        renderCell={renderCell}
-      />
-
-      <TouchableNativeFeedback
-        onPress={() => {
-          pinVerification();
-        }}>
-        <View style={styles.nextButton}>
+        <>
           {TYPE === 'Pin' ? (
             pinSet ? (
-              <Text style={styles.nextButtonText}> Verify </Text>
+              <Text style={styles.title}> {TYPE} Verification</Text>
+            ) : (
+              <Text style={styles.title}> Set {TYPE}</Text>
+            )
+          ) : (
+            <Text style={styles.title}>{TYPE} Verification</Text>
+          )}
+
+          <Text style={styles.subTitle}>
+            Please enter your {CELL_COUNT} digit pin below{' '}
+          </Text>
+
+          <CodeField
+            ref={ref}
+            {...props}
+            value={value}
+            onChangeText={setValue}
+            cellCount={CELL_COUNT}
+            rootStyle={styles.codeFiledRoot}
+            keyboardType="number-pad"
+            textContentType="oneTimeCode"
+            renderCell={renderCell}
+          />
+
+          <TouchableNativeFeedback
+            onPress={() => {
+              pinVerification();
+            }}>
+            <View style={styles.nextButton}>
+              {TYPE === 'Pin' ? (
+                pinSet ? (
+                  <Text style={styles.nextButtonText}> Verify </Text>
+                ) : (
+                  <Text style={styles.nextButtonText}> Set {TYPE} </Text>
+                )
+              ) : (
+                <Text style={styles.nextButtonText}>Verify</Text>
+              )}
+            </View>
+          </TouchableNativeFeedback>
+          {TYPE === 'Pin' ? (
+            checkPin === 'NOT OK ERR' ? (
+              <Text style={styles.errMessage}>
+                Please ensure you are connected to the Linnos sign bluetooth
+                device
+              </Text>
             ) : (
               <Text style={styles.nextButtonText}> Set {TYPE} </Text>
             )
           ) : (
-            <Text style={styles.nextButtonText}>Verify</Text>
+            <Text style={styles.nextButtonText}></Text>
           )}
-        </View>
-      </TouchableNativeFeedback>
-      {TYPE === 'Pin' ? (
-        checkPin === 'NOT OK ERR' ? (
-          <Text style={styles.errMessage}>
-            Please ensure you are connected to the Linnos sign bluetooth device
-          </Text>
-        ) : (
-          <Text style={styles.nextButtonText}> Set {TYPE} </Text>
-        )
-      ) : (
-        <Text style={styles.nextButtonText}></Text>
+        </>
       )}
     </SafeAreaView>
   );

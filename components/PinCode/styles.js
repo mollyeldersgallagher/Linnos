@@ -104,6 +104,29 @@ const styles = StyleSheet.create({
     height: 100,
     alignContent: 'center',
   },
+  loading: {
+    marginTop: 50,
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  loadingHeading: {
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    fontFamily: 'Roboto-Medium',
+    fontSize: 20,
+    marginBottom: 10,
+  },
+  loadingDes: {
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    fontFamily: 'Roboto-Regular',
+  },
 });
 
 export default styles;

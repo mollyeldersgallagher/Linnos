@@ -33,6 +33,8 @@ class SelectedDevice extends React.Component {
       device: this.props.route.params.device,
       connecting: false,
       pairing: false,
+      checkingPin: false,
+      pinChecked: false,
     };
   }
 
@@ -53,13 +55,17 @@ class SelectedDevice extends React.Component {
       this.toggleDevicePairing(this.state.device);
     }
     this.focusListener = this.props.navigation.addListener('focus', () => {
+      this.isConnected();
+
       this.setState({
         processing: this.props.route.params.processing,
         device: this.props.route.params.device,
         connecting: false,
         pairing: false,
+        checkingPin: false,
+        pinChecked: false,
       });
-      this.isConnected();
+      console.log('listener');
     });
   }
   componentWillUnmount() {
@@ -103,6 +109,7 @@ class SelectedDevice extends React.Component {
         showMessage({
           message: `Device ${paired.name}<${paired.id}> paired successfully`,
           type: 'success',
+          duration: 3000,
         });
 
         this.setState(({devices, device}) => ({
@@ -117,6 +124,7 @@ class SelectedDevice extends React.Component {
         showMessage({
           message: `Device <${id}> pairing failed`,
           type: 'danger',
+          duration: 3000,
         });
         this.setState({pairing: false, processing: false});
       }
@@ -124,6 +132,7 @@ class SelectedDevice extends React.Component {
       showMessage({
         message: `Error ${e.message}`,
         type: 'danger',
+        duration: 3000,
       });
       this.setState({pairing: false, processing: false});
     }
@@ -139,6 +148,7 @@ class SelectedDevice extends React.Component {
         showMessage({
           message: `Device ${unpaired.name}<${unpaired.id}> unpaired successfully`,
           type: 'success',
+          duration: 3000,
         });
 
         this.setState(({devices, device}) => ({
@@ -154,6 +164,7 @@ class SelectedDevice extends React.Component {
         showMessage({
           message: `Device <${id}> unpairing failed`,
           type: 'danger',
+          duration: 3000,
         });
         this.setState({pairing: false, processing: false});
       }
@@ -161,6 +172,7 @@ class SelectedDevice extends React.Component {
       showMessage({
         message: `Error ${e.message}`,
         type: 'danger',
+        duration: 3000,
       });
       this.setState({pairing: false, processing: false});
     }
@@ -187,6 +199,7 @@ class SelectedDevice extends React.Component {
           message: 'Connected',
           description: `Connection to device ${connected.name} <${connected.id}> was successful`,
           type: 'success',
+          duration: 3000,
         });
         this.setState(({device}) => ({
           processing: false,
@@ -197,13 +210,13 @@ class SelectedDevice extends React.Component {
           },
         }));
 
-        // this.callSignController(this.state.device);
         this.callPinPad(this.state.device);
       } else {
         showMessage({
           message: 'Connection Failed ',
           description: `Failed to connect to device ${connected.name} <${id}>`,
           type: 'warning',
+          duration: 3000,
         });
 
         this.setState({processing: false});
@@ -213,6 +226,7 @@ class SelectedDevice extends React.Component {
         message: `Error ${e.message}`,
         description: `An error has occured trying to connect to  <${id}> please try again`,
         type: 'error',
+        duration: 3000,
       });
       this.setState({processing: false});
     }
@@ -236,6 +250,7 @@ class SelectedDevice extends React.Component {
         message: 'Error',
         description: `An error has occured : ${e.message}`,
         type: 'danger',
+        duration: 3000,
       });
       this.props.navigation.navigate('HomeStack', {
         screen: 'SelectedDevice',
@@ -262,28 +277,36 @@ class SelectedDevice extends React.Component {
   callPinPad = async () => {
     if (this.state.device) {
       // command and request handler, returns result
+      this.setState({checkingPin: true, pinChecked: false});
       let result = await pinCommandHandler(this.state.device.id, null, true);
-      console.log(result);
-      if (result === 'NOT OK ERR') {
+
+      if (result.res === 'NOT OK ERR') {
+        this.setState({checkingPin: false});
+        this.setState({pinFailed: true});
+
+        //ERROR MESSAGE DISPLAY
+        showMessage({
+          message: 'Connection to Sign Failed',
+          description: `Please ensure you are connected to the correct device`,
+          type: 'danger',
+          duration: 3000,
+        });
+
+        // this.props.navigation.navigate('HomeStack', {screen: 'Home'});
+      } else {
+        console.log(result.res + ' ' + result.pinSet);
+        this.setState({pinFailed: false, checkingPin: false});
+        await this.props.navigation.navigate('PinCode', {
+          pinLength: 4,
+          type: 'Pin',
+          deviceId: this.state.device.id,
+          pinResult: result,
+        });
       }
-
-      console.log(result.res + ' ' + result.pinSet);
-      await this.props.navigation.navigate('PinCode', {
-        pinLength: 4,
-        type: 'Pin',
-        deviceId: this.state.device.id,
-        pinResult: result,
-      });
-
-      // this.props.navigation.navigate('PinCode', {
-      //   pinLength: 4,
-      //   type: 'Pin',
-      //   deviceId: this.state.device.id,
-      //   pinResult: result,
-      // });
     } else {
       console.log('error no device found');
     }
+    this.setState({pinChecked: true});
   };
   callAdminController = (device) => {
     if (device) {
@@ -368,7 +391,27 @@ class SelectedDevice extends React.Component {
                     </TouchableOpacity>
                   </View>
 
-                  {this.state.device.pinResponce && (
+                  {this.state.checkingPin && (
+                    <View style={styles.loading}>
+                      <Text style={styles.loadingHeading}>
+                        Connection to Linnos Sign
+                      </Text>
+                      <Text style={styles.loadingDes}>
+                        Please wait while we make a connection
+                      </Text>
+                      <ActivityIndicator
+                        style={{marginTop: 15}}
+                        size={Platform.OS === 'ios' ? 1 : 60}
+                        animating={this.state.checkingPin}
+                        color="#64aabd"
+                      />
+                    </View>
+                  )}
+                </>
+              )}
+              {/* {!this.state.pinChecked && (
+                <>
+                  {!this.state.pinFailed && (
                     <React.Fragment>
                       <View style={styles.controller}>
                         <Text style={styles.controllerHeading}>
@@ -381,21 +424,27 @@ class SelectedDevice extends React.Component {
                           }}>
                           <Text style={styles.buttonText}>Sign Controller</Text>
                         </TouchableOpacity>
-
-                        {/* <TouchableOpacity
-                            style={styles.buttons}
-                            onPress={() => {
-                              this.callAdminController(this.state.device);
-                            }}>
-                            <Text style={styles.buttonText}>
-                              Admin Controller
-                            </Text>
-                          </TouchableOpacity> */}
                       </View>
                     </React.Fragment>
                   )}
+                  {this.state.pinFailed && (
+                    <>
+                      <View style={styles.controller}>
+                        <View style={styles.loading}>
+                          <Text style={styles.loadingHeading}>
+                            Failed to recieve a response for the sign
+                          </Text>
+                          <Text style={styles.loadingDes}>
+                            The sign is not responding. Please ensure you are
+                            connected to the correct bluetooth device to
+                            communicate with the sign
+                          </Text>
+                        </View>
+                      </View>
+                    </>
+                  )}
                 </>
-              )}
+              )} */}
             </View>
           </>
         ) : null}
