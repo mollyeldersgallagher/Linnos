@@ -118,8 +118,9 @@ const PinCode = ({navigation, route}) => {
           // seperating value into array of digits
 
           pinDigit = value.charCodeAt(i);
+          console.log('PIN DIGIT    ' + pinDigit);
           pinArray.push(pinDigit);
-          console.log(pinArray);
+          console.log('PIN ARRAY     ' + pinArray);
         }
         let pinBuffer = Buffer.from(pinArray);
 

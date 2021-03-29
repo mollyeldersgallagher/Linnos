@@ -68,13 +68,13 @@ export const pinCommandHandler = async (id, pinBuffer, pinSet) => {
   let buffer;
   // check if the pin is entered, if not default to 3683
   if (pinBuffer === null || pinBuffer === undefined) {
-    pinBuffer = Buffer.from([0x33, 0x36, 0x38, 0x33]);
+    pinBuffer = Buffer.from([51, 54, 56, 51]);
   }
   // if the pin is set verify pin with command 20 or if pin is not set, set it with command 19
   if (pinSet) {
-    buffer = Buffer.from([0x02, 0x20, 0x04]);
+    buffer = Buffer.from([2, 20, 4]);
   } else {
-    buffer = Buffer.from([0x02, 0x19, 0x04]);
+    buffer = Buffer.from([2, 19, 4]);
   }
   let newBuffer = Buffer.concat([buffer, pinBuffer]);
   let finalBuffer = Buffer.concat([
@@ -82,7 +82,7 @@ export const pinCommandHandler = async (id, pinBuffer, pinSet) => {
     Buffer.from(splitCRC(crc.crc16xmodem(newBuffer))),
   ]);
   console.log(finalBuffer);
-  console.log('pin buffer' + finalBuffer);
+  console.log('FINAL PIN BUFFER   ' + finalBuffer);
   let message = finalBuffer;
   try {
     const device = await BluetoothSerial.device(id);
