@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import React from 'react';
 import {
   Text,
@@ -86,9 +87,16 @@ export default class SignController extends React.Component {
     this.focusListener();
   }
 
+  async wait(ms) {
+    return new Promise((resolve) => {
+      setTimeout(resolve, ms);
+    });
+  }
+
   async setup() {
-    if (this.state.isVerified) {
+    // if (this.state.isVerified) {
       let config = await getConfiguration(this.state.deviceId);
+      await this.wait(2000);
       this.setState({
         auto: config.auto,
         brightness: config.brightness,
@@ -96,40 +104,50 @@ export default class SignController extends React.Component {
         digits: parseInt(config.digits),
         config: config,
       });
-    } else {
-      console.log('ERROR READING DATA');
-      this.setState({
-        readingData: false,
-      });
-    }
-    if (this.state.config !== {}) {
+    // } else {
+    //   console.log('ERROR READING DATA');
+    //   this.setState({
+    //     readingData: false,
+    //   });
+    // }
+    await this.wait(4000);
+
+    // if (this.state.config !== {}) {
       let signPrices = await getPrices(
         this.state.deviceId,
         this.state.lines,
         this.state.digits,
       );
+      await this.wait(2000);
+
       this.setState({
         prices: signPrices,
         newPrices: signPrices,
       });
-    } else {
-      console.log('ERROR READING DATA');
-      this.setState({
-        readingData: false,
-      });
-    }
-    if (this.state.prices !== []) {
+    // } else {
+    //   console.log('ERROR READING DATA');
+    //   this.setState({
+    //     readingData: false,
+    //   });
+    // }
+    // if (this.state.prices !== []) {
+      await this.wait(4000);
+
       let lightStatus = await getLightingStatus(this.state.deviceId);
+      await this.wait(2000);
+
       this.setState({
         extLight: lightStatus.extLight,
         display: lightStatus.display,
       });
+      await this.wait(2000);
+
       this.setState({
         readingData: false,
       });
-    } else {
-      console.log('ERROR READING DATA');
-    }
+    // } else {
+    //   console.log('ERROR READING DATA');
+    // }
   }
   callAdminController = () => {
     if (this.state.deviceId) {
@@ -198,6 +216,10 @@ export default class SignController extends React.Component {
     commandHandler(21, data, this.state.deviceId);
   }
   handleBrightness(brightness) {
+    if(brightness){
+      let brightness = 15;
+    }
+    
     let data;
     if (brightness === 75) {
       data = [15];
