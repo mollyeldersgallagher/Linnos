@@ -249,18 +249,18 @@ export const getConfiguration = async (id) => {
     const device = await BluetoothSerial.device(id);
     let writePromise = await device.write(newBuffer);
     await Promise.all(writePromise).then(
-      console.log('Packets Written ' + newBuffer),
+      console.log('CONFIG Packets Written ' + newBuffer),
     );
-    await wait(1000);
+    await wait(3000);
     const response = await BluetoothSerial.readFromDevice(id);
     await Promise.all(response).then(
-      console.log('Response Recieved ' + response),
+      console.log('CONFIG Response Recieved ' + response),
     );
 
     var res = response.substring(0, 2);
     if (response.length > 5 && response.substring(0, 3) === '206') {
       switch (response.charAt(3)) {
-        case '2':
+        case '2':  // '2D is returned just checking first value to target it in string 
           // brightness is = 45
           config.brightness = 45;
           config.auto = response.charAt(5);
@@ -328,12 +328,12 @@ export const getLightingStatus = async (id) => {
     let writePromise = await device.write(newBuffer);
 
     await Promise.all(writePromise).then(
-      console.log('Lighting Packet Written ' + newBuffer),
+      console.log('LIGHTING Packet Written ' + newBuffer),
     );
-    await wait(2000);
+    await wait(3000);
     const response = await BluetoothSerial.readFromDevice(id);
     await Promise.all(response).then(
-      console.log('Lighting Response Recieved ' + response),
+      console.log('LIGHTING Response Recieved ' + response),
     );
 
     var res = response.substring(0, 2);
@@ -370,11 +370,11 @@ export const getPrices = async (id, lines, digits) => {
 
     let writePromise = await device.write(newBuffer);
 
-    await Promise.all(writePromise).then(console.log('Price Packet Written'));
-    await wait(1000);
+    await Promise.all(writePromise).then(console.log('PRICE Packet Written'));
+    await wait(3000);
     const response = await BluetoothSerial.readFromDevice(id);
     await Promise.all(response).then(
-      console.log('Price Response Recieved ' + response),
+      console.log('PRICE Response Recieved ' + response),
     );
 
     var res = response.substring(0, 2);

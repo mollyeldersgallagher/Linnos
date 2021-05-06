@@ -96,7 +96,7 @@ export default class SignController extends React.Component {
   async setup() {
     // if (this.state.isVerified) {
       let config = await getConfiguration(this.state.deviceId);
-      await this.wait(2000);
+      await this.wait(1000);
       this.setState({
         auto: config.auto,
         brightness: config.brightness,
@@ -110,7 +110,7 @@ export default class SignController extends React.Component {
     //     readingData: false,
     //   });
     // }
-    await this.wait(4000);
+    await this.wait(3000);
 
     // if (this.state.config !== {}) {
       let signPrices = await getPrices(
@@ -118,7 +118,7 @@ export default class SignController extends React.Component {
         this.state.lines,
         this.state.digits,
       );
-      await this.wait(2000);
+      await this.wait(1000);
 
       this.setState({
         prices: signPrices,
@@ -131,16 +131,16 @@ export default class SignController extends React.Component {
     //   });
     // }
     // if (this.state.prices !== []) {
-      await this.wait(4000);
+      await this.wait(3000);
 
       let lightStatus = await getLightingStatus(this.state.deviceId);
-      await this.wait(2000);
+      await this.wait(1000);
 
       this.setState({
         extLight: lightStatus.extLight,
         display: lightStatus.display,
       });
-      await this.wait(2000);
+      await this.wait(1000);
 
       this.setState({
         readingData: false,
@@ -329,7 +329,7 @@ export default class SignController extends React.Component {
                   {this.state.isVerified ? (
                     <View style={{flex: 1}}>
                       {/* <Text style={{fontSize: 20, marginTop: 10}}>Update Sign</Text> */}
-                      <View
+                      {/* <View
                         style={{flex: 1, flexDirection: 'column', margin: 10}}>
                         <TouchableOpacity
                           style={styles.button}
@@ -339,7 +339,7 @@ export default class SignController extends React.Component {
                           }}>
                           <Text style={styles.buttonText}>Change Pin</Text>
                         </TouchableOpacity>
-                      </View>
+                      </View> */}
                       {priceInputs}
                       <View
                         style={{flex: 1, flexDirection: 'column', margin: 10}}>
